@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Sora", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Aegis Colors */
+  --color-aegis-bg: #080c14;
+  --color-aegis-surface: #0d1220;
+  --color-aegis-border: #1e2d45;
+  --color-aegis-blue: #3b82f6;
+  --color-aegis-accent: #06b6d4;
+  --color-aegis-red: #ef4444;
+  --color-aegis-amber: #f59e0b;
+  --color-aegis-green: #10b981;
+}
+
+:root {
+  --bg: #F8F9FA;
+  --ink: #0F172A;
+  --line: #E2E8F0;
+  --accent: #3B82F6;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+}
+
+/* Light / Dark overrides */
+.dark {
+  --bg: var(--color-aegis-bg);
+  --ink: #e8edf5;
+  --line: var(--color-aegis-border);
+  --accent: var(--color-aegis-blue);
+}
+
+body {
+  @apply bg-[var(--bg)] text-[var(--ink)] font-sans antialiased transition-colors duration-300;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Strip Recharts default white backgrounds */
+.recharts-wrapper,
+.recharts-surface {
+  background: transparent !important;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white dark:bg-aegis-surface border border-slate-200 dark:border-aegis-border shadow-sm rounded-xl transition-all duration-300;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-aegis-border;
+  }
+
+  .nav-item.active {
+    @apply text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 font-medium;
+  }
+
+  .status-pill {
+    @apply px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-sm transition-all active:scale-95;
+  }
+}
