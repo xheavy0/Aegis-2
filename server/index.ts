@@ -21,6 +21,10 @@ import notesRouter from './routes/notes.js';
 import authRouter from './routes/auth.js';
 import { requireAuth } from './auth.js';
 import { findUserById } from './db.js';
+import { hydrate, snapshot } from './data/store.js';
+
+// Load persisted collections from SQLite (or seed the DB on first boot)
+hydrate();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -34,6 +38,14 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
+  // Persist all collections to SQLite after a successful mutating request
+  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') {
+    res.on('finish', () => {
+      if (res.statusCode < 400) {
+        try { snapshot(); } catch (err) { console.error('snapshot failed:', err); }
+      }
+    });
+  }
   next();
 });
 
