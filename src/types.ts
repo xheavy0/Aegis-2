@@ -55,12 +55,33 @@ export interface Finding {
   remediationNotes: string;
 }
 
+export type VendorTier = 'Tier 1' | 'Tier 2' | 'Tier 3';
+export type VendorRiskLevel = 'Critical' | 'High' | 'Medium' | 'Low';
+export type VendorComplianceStatus = 'Compliant' | 'Non-Compliant' | 'Pending' | 'Under Review';
+export type VendorRiskTrend = 'Improving' | 'Stable' | 'Degrading';
+
 export interface Vendor {
   id: string;
   name: string;
-  criticality: 'Tier 1' | 'Tier 2' | 'Tier 3';
-  complianceStatus: 'Compliant' | 'Non-compliant' | 'Pending';
+  category: string;
+  tier: VendorTier;
+  securityScore: number;
+  inherentRisk: VendorRiskLevel;
+  residualRisk: VendorRiskLevel;
+  complianceStatus: VendorComplianceStatus;
   lastAssessment: string;
+  nextReview: string;
+  owner: string;
+  openFindings: number;
+  criticalFindings: number;
+  certifications: string[];
+  impactScore: number;     // 1-5
+  likelihoodScore: number; // 1-5
+  riskTrend: VendorRiskTrend;
+  annualSpend: string;
+  description: string;
+  dataAccess: string[];
+  riskCategories: { name: string; inherent: number; residual: number }[];
 }
 
 export type TaskStatus = 'Backlog' | 'Todo' | 'In Progress' | 'In Review' | 'Done' | 'Cancelled';

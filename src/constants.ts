@@ -1,4 +1,4 @@
-import { NISTStatus, Vendor, CalendarEvent } from './types';
+import { NISTStatus, VendorTier, VendorComplianceStatus, CalendarEvent } from './types';
 
 export const NIST_CSF_FUNCTIONS = [
   { id: 'GOVERN', label: 'Govern', color: '#6366F1', description: 'Establish the organizations mission, stakeholder expectations, and legal requirements.' },
@@ -18,9 +18,18 @@ export const MOCK_NIST_STATUS: NISTStatus[] = [
   { function: 'RECOVER', score: 78, totalControls: 12, implementedControls: 9 },
 ];
 
-export const MOCK_VENDORS: Vendor[] = [
-  { id: 'V-001', name: 'CloudOps Pro', criticality: 'Tier 1', complianceStatus: 'Compliant', lastAssessment: '2023-11-12' },
-  { id: 'V-002', name: 'SecurityFlow Inc', criticality: 'Tier 2', complianceStatus: 'Pending', lastAssessment: '2024-01-05' },
+// Lightweight vendor summary for reporting roll-ups (tier + compliance only).
+export const MOCK_VENDORS: { tier: VendorTier; complianceStatus: VendorComplianceStatus }[] = [
+  { tier: 'Tier 1', complianceStatus: 'Compliant' },
+  { tier: 'Tier 2', complianceStatus: 'Pending' },
+  { tier: 'Tier 1', complianceStatus: 'Compliant' },
+  { tier: 'Tier 2', complianceStatus: 'Non-Compliant' },
+  { tier: 'Tier 2', complianceStatus: 'Compliant' },
+  { tier: 'Tier 3', complianceStatus: 'Compliant' },
+  { tier: 'Tier 1', complianceStatus: 'Under Review' },
+  { tier: 'Tier 3', complianceStatus: 'Pending' },
+  { tier: 'Tier 2', complianceStatus: 'Compliant' },
+  { tier: 'Tier 3', complianceStatus: 'Compliant' },
 ];
 
 export const MOCK_CALENDAR_EVENTS: CalendarEvent[] = [

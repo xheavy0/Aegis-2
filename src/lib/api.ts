@@ -36,7 +36,7 @@ export const api = {
   // Vendors
   getVendors: () => req<Vendor[]>('GET', '/vendors'),
   getVendor: (id: string) => req<Vendor>('GET', `/vendors/${id}`),
-  createVendor: (body: Omit<Vendor, 'id' | 'lastAssessment'>) => req<Vendor>('POST', '/vendors', body),
+  createVendor: (body: Omit<Vendor, 'id'>) => req<Vendor>('POST', '/vendors', body),
   updateVendor: (id: string, body: Partial<Vendor>) => req<Vendor>('PUT', `/vendors/${id}`, body),
   deleteVendor: (id: string) => req<void>('DELETE', `/vendors/${id}`),
 

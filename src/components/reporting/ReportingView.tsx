@@ -151,11 +151,11 @@ export function ReportingView() {
 
       {/* Vendor / TPSA Statistics — moved up */}
       {(() => {
-        const t1 = MOCK_VENDORS.filter(v => v.criticality === 'Tier 1').length;
-        const t2 = MOCK_VENDORS.filter(v => v.criticality === 'Tier 2').length;
-        const t3 = MOCK_VENDORS.filter(v => v.criticality === 'Tier 3').length;
+        const t1 = MOCK_VENDORS.filter(v => v.tier === 'Tier 1').length;
+        const t2 = MOCK_VENDORS.filter(v => v.tier === 'Tier 2').length;
+        const t3 = MOCK_VENDORS.filter(v => v.tier === 'Tier 3').length;
         const compliant    = MOCK_VENDORS.filter(v => v.complianceStatus === 'Compliant').length;
-        const nonCompliant = MOCK_VENDORS.filter(v => v.complianceStatus === 'Non-compliant').length;
+        const nonCompliant = MOCK_VENDORS.filter(v => v.complianceStatus === 'Non-Compliant').length;
         const pending      = MOCK_VENDORS.filter(v => v.complianceStatus === 'Pending').length;
         const total        = MOCK_VENDORS.length;
         const tiers = [

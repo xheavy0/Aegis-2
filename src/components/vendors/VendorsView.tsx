@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Users, ShieldAlert, CheckCircle2, AlertCircle, Plus, X, ChevronRight,
   TrendingUp, TrendingDown, Minus, Search, Filter, ExternalLink,
@@ -12,37 +12,16 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
   CartesianGrid, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis
 } from 'recharts';
+import { Vendor, VendorTier, VendorRiskLevel, VendorComplianceStatus, VendorRiskTrend } from '@/src/types';
+import { api } from '@/src/lib/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Tier = 'Tier 1' | 'Tier 2' | 'Tier 3';
-type RiskLevel = 'Critical' | 'High' | 'Medium' | 'Low';
-type ComplianceStatus = 'Compliant' | 'Non-Compliant' | 'Pending' | 'Under Review';
-type RiskTrend = 'Improving' | 'Stable' | 'Degrading';
+type Tier = VendorTier;
+type RiskLevel = VendorRiskLevel;
+type ComplianceStatus = VendorComplianceStatus;
+type RiskTrend = VendorRiskTrend;
 
-interface Vendor {
-  id: string;
-  name: string;
-  category: string;
-  tier: Tier;
-  securityScore: number;
-  inherentRisk: RiskLevel;
-  residualRisk: RiskLevel;
-  complianceStatus: ComplianceStatus;
-  lastAssessment: string;
-  nextReview: string;
-  owner: string;
-  openFindings: number;
-  criticalFindings: number;
-  certifications: string[];
-  impactScore: number;    // 1-5
-  likelihoodScore: number; // 1-5
-  riskTrend: RiskTrend;
-  annualSpend: string;
-  description: string;
-  dataAccess: string[];
-  riskCategories: { name: string; inherent: number; residual: number }[];
-}
 
 interface Assessment {
   id: string;
@@ -58,188 +37,6 @@ interface Assessment {
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
-const VENDORS: Vendor[] = [
-  {
-    id: 'V-001', name: 'CloudOps Pro', category: 'IaaS / Cloud', tier: 'Tier 1',
-    securityScore: 88, inherentRisk: 'Critical', residualRisk: 'Low',
-    complianceStatus: 'Compliant', lastAssessment: '2025-11-12', nextReview: '2026-05-12',
-    owner: 'Alex C.', openFindings: 2, criticalFindings: 0,
-    certifications: ['SOC 2 Type II', 'ISO 27001', 'CSA STAR'],
-    impactScore: 5, likelihoodScore: 2, riskTrend: 'Stable',
-    annualSpend: '$480,000',
-    description: 'Primary cloud infrastructure provider. Hosts all production workloads and customer data.',
-    dataAccess: ['Customer PII', 'Financial Data', 'Intellectual Property'],
-    riskCategories: [
-      { name: 'InfoSec', inherent: 90, residual: 15 },
-      { name: 'Operational', inherent: 80, residual: 20 },
-      { name: 'Financial', inherent: 70, residual: 25 },
-      { name: 'Compliance', inherent: 75, residual: 10 },
-      { name: 'Reputational', inherent: 65, residual: 15 },
-    ],
-  },
-  {
-    id: 'V-002', name: 'SecurityFlow Inc', category: 'Security SaaS', tier: 'Tier 2',
-    securityScore: 62, inherentRisk: 'High', residualRisk: 'Medium',
-    complianceStatus: 'Pending', lastAssessment: '2025-01-05', nextReview: '2026-06-05',
-    owner: 'Sarah L.', openFindings: 7, criticalFindings: 1,
-    certifications: ['SOC 2 Type I'],
-    impactScore: 3, likelihoodScore: 3, riskTrend: 'Degrading',
-    annualSpend: '$120,000',
-    description: 'SIEM and security monitoring platform. Receives security event logs from all infrastructure.',
-    dataAccess: ['Security Logs', 'Infrastructure Metadata'],
-    riskCategories: [
-      { name: 'InfoSec', inherent: 65, residual: 40 },
-      { name: 'Operational', inherent: 55, residual: 35 },
-      { name: 'Financial', inherent: 40, residual: 30 },
-      { name: 'Compliance', inherent: 60, residual: 45 },
-      { name: 'Reputational', inherent: 50, residual: 35 },
-    ],
-  },
-  {
-    id: 'V-003', name: 'PayShield Gateway', category: 'FinTech / Payments', tier: 'Tier 1',
-    securityScore: 94, inherentRisk: 'Critical', residualRisk: 'Low',
-    complianceStatus: 'Compliant', lastAssessment: '2026-02-20', nextReview: '2026-08-20',
-    owner: 'Alex C.', openFindings: 1, criticalFindings: 0,
-    certifications: ['PCI DSS Level 1', 'SOC 2 Type II', 'ISO 27001'],
-    impactScore: 5, likelihoodScore: 1, riskTrend: 'Improving',
-    annualSpend: '$760,000',
-    description: 'Payment processing gateway for all customer transactions. PCI-compliant infrastructure.',
-    dataAccess: ['Payment Card Data', 'Customer PII', 'Financial Transactions'],
-    riskCategories: [
-      { name: 'InfoSec', inherent: 95, residual: 8 },
-      { name: 'Operational', inherent: 90, residual: 10 },
-      { name: 'Financial', inherent: 98, residual: 12 },
-      { name: 'Compliance', inherent: 92, residual: 6 },
-      { name: 'Reputational', inherent: 88, residual: 10 },
-    ],
-  },
-  {
-    id: 'V-004', name: 'DataVault Analytics', category: 'Analytics SaaS', tier: 'Tier 2',
-    securityScore: 45, inherentRisk: 'High', residualRisk: 'High',
-    complianceStatus: 'Non-Compliant', lastAssessment: '2025-06-18', nextReview: '2026-05-01',
-    owner: 'Elena R.', openFindings: 14, criticalFindings: 3,
-    certifications: [],
-    impactScore: 3, likelihoodScore: 4, riskTrend: 'Degrading',
-    annualSpend: '$95,000',
-    description: 'Business intelligence and analytics platform. Processes operational and customer data for reporting.',
-    dataAccess: ['Operational Data', 'Customer Behavioral Data'],
-    riskCategories: [
-      { name: 'InfoSec', inherent: 55, residual: 50 },
-      { name: 'Operational', inherent: 45, residual: 42 },
-      { name: 'Financial', inherent: 50, residual: 48 },
-      { name: 'Compliance', inherent: 60, residual: 58 },
-      { name: 'Reputational', inherent: 48, residual: 45 },
-    ],
-  },
-  {
-    id: 'V-005', name: 'NetSecure VPN', category: 'Network Security', tier: 'Tier 2',
-    securityScore: 73, inherentRisk: 'High', residualRisk: 'Medium',
-    complianceStatus: 'Compliant', lastAssessment: '2026-01-10', nextReview: '2026-07-10',
-    owner: 'David M.', openFindings: 4, criticalFindings: 0,
-    certifications: ['SOC 2 Type II', 'FedRAMP Moderate'],
-    impactScore: 4, likelihoodScore: 2, riskTrend: 'Stable',
-    annualSpend: '$68,000',
-    description: 'Enterprise VPN solution for remote access. All employee remote connections routed through this vendor.',
-    dataAccess: ['Network Traffic Metadata', 'Employee Credentials'],
-    riskCategories: [
-      { name: 'InfoSec', inherent: 75, residual: 30 },
-      { name: 'Operational', inherent: 65, residual: 28 },
-      { name: 'Financial', inherent: 40, residual: 20 },
-      { name: 'Compliance', inherent: 55, residual: 22 },
-      { name: 'Reputational', inherent: 60, residual: 25 },
-    ],
-  },
-  {
-    id: 'V-006', name: 'HRBridge HRIS', category: 'HR Technology', tier: 'Tier 3',
-    securityScore: 82, inherentRisk: 'Medium', residualRisk: 'Low',
-    complianceStatus: 'Compliant', lastAssessment: '2025-10-05', nextReview: '2026-10-05',
-    owner: 'Sarah L.', openFindings: 1, criticalFindings: 0,
-    certifications: ['SOC 2 Type II', 'ISO 27001'],
-    impactScore: 2, likelihoodScore: 2, riskTrend: 'Stable',
-    annualSpend: '$42,000',
-    description: 'Human resources information system for employee records, payroll, and benefits management.',
-    dataAccess: ['Employee PII', 'Salary Data', 'Benefits Information'],
-    riskCategories: [
-      { name: 'InfoSec', inherent: 40, residual: 12 },
-      { name: 'Operational', inherent: 35, residual: 10 },
-      { name: 'Financial', inherent: 45, residual: 15 },
-      { name: 'Compliance', inherent: 50, residual: 12 },
-      { name: 'Reputational', inherent: 38, residual: 10 },
-    ],
-  },
-  {
-    id: 'V-007', name: 'GlobalLogix ERP', category: 'Enterprise Software', tier: 'Tier 1',
-    securityScore: 67, inherentRisk: 'Critical', residualRisk: 'High',
-    complianceStatus: 'Under Review', lastAssessment: '2025-09-30', nextReview: '2026-05-30',
-    owner: 'Alex C.', openFindings: 9, criticalFindings: 2,
-    certifications: ['ISO 27001'],
-    impactScore: 5, likelihoodScore: 3, riskTrend: 'Degrading',
-    annualSpend: '$550,000',
-    description: 'Core ERP system managing supply chain, financials, and inventory. Deeply integrated with operations.',
-    dataAccess: ['Financial Data', 'Supply Chain Data', 'Customer Orders', 'Vendor Contracts'],
-    riskCategories: [
-      { name: 'InfoSec', inherent: 80, residual: 55 },
-      { name: 'Operational', inherent: 85, residual: 60 },
-      { name: 'Financial', inherent: 90, residual: 65 },
-      { name: 'Compliance', inherent: 75, residual: 50 },
-      { name: 'Reputational', inherent: 70, residual: 55 },
-    ],
-  },
-  {
-    id: 'V-008', name: 'AI Insights Co', category: 'AI / ML SaaS', tier: 'Tier 3',
-    securityScore: 55, inherentRisk: 'Medium', residualRisk: 'Medium',
-    complianceStatus: 'Pending', lastAssessment: '2025-12-15', nextReview: '2026-06-15',
-    owner: 'Elena R.', openFindings: 5, criticalFindings: 0,
-    certifications: ['SOC 2 Type I'],
-    impactScore: 2, likelihoodScore: 3, riskTrend: 'Improving',
-    annualSpend: '$28,000',
-    description: 'AI-powered analytics and predictive modeling. Processes anonymized customer datasets.',
-    dataAccess: ['Anonymized Customer Data', 'Operational Metrics'],
-    riskCategories: [
-      { name: 'InfoSec', inherent: 55, residual: 40 },
-      { name: 'Operational', inherent: 45, residual: 35 },
-      { name: 'Financial', inherent: 35, residual: 30 },
-      { name: 'Compliance', inherent: 50, residual: 42 },
-      { name: 'Reputational', inherent: 48, residual: 38 },
-    ],
-  },
-  {
-    id: 'V-009', name: 'CloudBackup Plus', category: 'Backup / DR', tier: 'Tier 2',
-    securityScore: 79, inherentRisk: 'High', residualRisk: 'Low',
-    complianceStatus: 'Compliant', lastAssessment: '2026-03-01', nextReview: '2026-09-01',
-    owner: 'David M.', openFindings: 2, criticalFindings: 0,
-    certifications: ['SOC 2 Type II', 'ISO 27001'],
-    impactScore: 4, likelihoodScore: 1, riskTrend: 'Stable',
-    annualSpend: '$36,000',
-    description: 'Enterprise backup and disaster recovery solution. Stores encrypted off-site copies of all critical data.',
-    dataAccess: ['All Production Data (Encrypted)'],
-    riskCategories: [
-      { name: 'InfoSec', inherent: 70, residual: 18 },
-      { name: 'Operational', inherent: 75, residual: 15 },
-      { name: 'Financial', inherent: 65, residual: 20 },
-      { name: 'Compliance', inherent: 72, residual: 14 },
-      { name: 'Reputational', inherent: 68, residual: 16 },
-    ],
-  },
-  {
-    id: 'V-010', name: 'LegalEase Docs', category: 'Legal Tech', tier: 'Tier 3',
-    securityScore: 77, inherentRisk: 'Medium', residualRisk: 'Low',
-    complianceStatus: 'Compliant', lastAssessment: '2025-08-22', nextReview: '2026-08-22',
-    owner: 'Sarah L.', openFindings: 0, criticalFindings: 0,
-    certifications: ['SOC 2 Type II'],
-    impactScore: 2, likelihoodScore: 2, riskTrend: 'Stable',
-    annualSpend: '$18,000',
-    description: 'Document management and e-signature platform for contracts and legal agreements.',
-    dataAccess: ['Legal Documents', 'Contract Data', 'Signature Data'],
-    riskCategories: [
-      { name: 'InfoSec', inherent: 38, residual: 12 },
-      { name: 'Operational', inherent: 30, residual: 10 },
-      { name: 'Financial', inherent: 35, residual: 12 },
-      { name: 'Compliance', inherent: 42, residual: 14 },
-      { name: 'Reputational', inherent: 32, residual: 10 },
-    ],
-  },
-];
 
 const ASSESSMENTS: Assessment[] = [
   { id: 'A-001', vendorId: 'V-004', vendorName: 'DataVault Analytics', tier: 'Tier 2', type: 'Annual Due Diligence', dueDate: '2026-05-01', status: 'Overdue', assignee: 'Elena R.', completion: 20 },
@@ -651,31 +448,43 @@ type Tab = typeof TABS[number];
 
 export function VendorsView() {
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [search, setSearch] = useState('');
   const [filterTier, setFilterTier] = useState<Tier | 'All'>('All');
   const [filterStatus, setFilterStatus] = useState<ComplianceStatus | 'All'>('All');
   const [filterRisk, setFilterRisk] = useState<RiskLevel | 'All'>('All');
 
-  const stats = useMemo(() => {
-    const t1 = VENDORS.filter(v => v.tier === 'Tier 1').length;
-    const t2 = VENDORS.filter(v => v.tier === 'Tier 2').length;
-    const t3 = VENDORS.filter(v => v.tier === 'Tier 3').length;
-    const compliant = VENDORS.filter(v => v.complianceStatus === 'Compliant').length;
-    const highRisk = VENDORS.filter(v => v.residualRisk === 'Critical' || v.residualRisk === 'High').length;
-    const totalFindings = VENDORS.reduce((s, v) => s + v.openFindings, 0);
-    return { t1, t2, t3, compliant, highRisk, totalFindings };
+  useEffect(() => {
+    let active = true;
+    api.getVendors()
+      .then(data => { if (active) { setVendors(data); setError(null); } })
+      .catch(err => { if (active) setError(err.message ?? 'Failed to load vendors'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  const filteredVendors = useMemo(() => VENDORS.filter(v => {
+  const stats = useMemo(() => {
+    const t1 = vendors.filter(v => v.tier === 'Tier 1').length;
+    const t2 = vendors.filter(v => v.tier === 'Tier 2').length;
+    const t3 = vendors.filter(v => v.tier === 'Tier 3').length;
+    const compliant = vendors.filter(v => v.complianceStatus === 'Compliant').length;
+    const highRisk = vendors.filter(v => v.residualRisk === 'Critical' || v.residualRisk === 'High').length;
+    const totalFindings = vendors.reduce((s, v) => s + v.openFindings, 0);
+    return { t1, t2, t3, compliant, highRisk, totalFindings };
+  }, [vendors]);
+
+  const filteredVendors = useMemo(() => vendors.filter(v => {
     if (search && !v.name.toLowerCase().includes(search.toLowerCase()) && !v.category.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterTier !== 'All' && v.tier !== filterTier) return false;
     if (filterStatus !== 'All' && v.complianceStatus !== filterStatus) return false;
     if (filterRisk !== 'All' && v.residualRisk !== filterRisk) return false;
     return true;
-  }), [search, filterTier, filterStatus, filterRisk]);
+  }), [vendors, search, filterTier, filterStatus, filterRisk]);
 
-  const riskRankingData = [...VENDORS]
+  const riskRankingData = [...vendors]
     .sort((a, b) => a.securityScore - b.securityScore)
     .slice(0, 7)
     .map(v => ({ name: v.name.split(' ')[0], score: v.securityScore, fill: v.securityScore >= 80 ? '#10b981' : v.securityScore >= 65 ? '#f59e0b' : '#ef4444' }));
@@ -696,10 +505,21 @@ export function VendorsView() {
         </button>
       </header>
 
+      {loading && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <Clock className="w-4 h-4 animate-spin" /> Loading vendors…
+        </div>
+      )}
+      {error && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      )}
+
       {/* KPI Strip */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Total Vendors', value: VENDORS.length, icon: Package, color: 'text-blue-500' },
+          { label: 'Total Vendors', value: vendors.length, icon: Package, color: 'text-blue-500' },
           { label: 'Tier 1 — Critical', value: stats.t1, icon: ShieldAlert, color: 'text-red-500' },
           { label: 'Tier 2 — High', value: stats.t2, icon: ShieldAlert, color: 'text-orange-400' },
           { label: 'Tier 3 — Standard', value: stats.t3, icon: ShieldAlert, color: 'text-blue-400' },
@@ -738,7 +558,7 @@ export function VendorsView() {
         {activeTab === 'Overview' && (
           <motion.div key="overview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <RiskHeatMap vendors={VENDORS} />
+              <RiskHeatMap vendors={vendors} />
 
               {/* Vendor Security Score Ranking */}
               <div className="glass-card p-6">
@@ -781,7 +601,7 @@ export function VendorsView() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...VENDORS].sort((a, b) => {
+                    {[...vendors].sort((a, b) => {
                       const order: Record<RiskLevel, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
                       return order[a.residualRisk] - order[b.residualRisk];
                     }).slice(0, 5).map(v => (
@@ -948,7 +768,7 @@ export function VendorsView() {
           <motion.div key="register" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
             <p className="text-xs text-slate-500 dark:text-slate-400">Open findings consolidated across all vendors, ordered by residual risk severity.</p>
             <div className="space-y-3">
-              {[...VENDORS]
+              {[...vendors]
                 .filter(v => v.openFindings > 0)
                 .sort((a, b) => {
                   const o: Record<RiskLevel, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
