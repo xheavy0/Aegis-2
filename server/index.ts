@@ -18,6 +18,9 @@ import controlsRouter from './routes/controls.js';
 import evidenceRouter from './routes/evidence.js';
 import auditsRouter from './routes/audits.js';
 import notesRouter from './routes/notes.js';
+import authRouter from './routes/auth.js';
+import { requireAuth } from './auth.js';
+import { findUserById } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -34,26 +37,28 @@ app.use((req, res, next) => {
   next();
 });
 
-// API routes
-app.use('/api/risks', risksRouter);
-app.use('/api/findings', findingsRouter);
-app.use('/api/vendors', vendorsRouter);
-app.use('/api/tasks', tasksRouter);
-app.use('/api/calendar', calendarRouter);
-app.use('/api/nist', nistRouter);
-app.use('/api/notifications', notificationsRouter);
-app.use('/api/policies', policiesRouter);
-app.use('/api/assets', assetsRouter);
-app.use('/api/bia', biaRouter);
-app.use('/api/controls', controlsRouter);
-app.use('/api/evidence', evidenceRouter);
-app.use('/api/audits', auditsRouter);
-app.use('/api/notes', notesRouter);
-
-// Health check
+// Public routes (no authentication required)
+app.use('/api/auth', authRouter);
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// All remaining /api routes require a valid bearer token
+const protect = requireAuth(findUserById);
+app.use('/api/risks', protect, risksRouter);
+app.use('/api/findings', protect, findingsRouter);
+app.use('/api/vendors', protect, vendorsRouter);
+app.use('/api/tasks', protect, tasksRouter);
+app.use('/api/calendar', protect, calendarRouter);
+app.use('/api/nist', protect, nistRouter);
+app.use('/api/notifications', protect, notificationsRouter);
+app.use('/api/policies', protect, policiesRouter);
+app.use('/api/assets', protect, assetsRouter);
+app.use('/api/bia', protect, biaRouter);
+app.use('/api/controls', protect, controlsRouter);
+app.use('/api/evidence', protect, evidenceRouter);
+app.use('/api/audits', protect, auditsRouter);
+app.use('/api/notes', protect, notesRouter);
 
 // Serve frontend build in production
 const distPath = path.join(__dirname, '../dist');

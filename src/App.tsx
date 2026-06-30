@@ -28,6 +28,7 @@ import { User, Bell, Search, Sun, Moon, CheckCheck, CalendarClock, AlertTriangle
 import { motion, AnimatePresence } from 'motion/react';
 import { AppNotification } from './types';
 import { canAccess, CurrentUser, DEFAULT_USERS, readRoleAccess } from './rbac';
+import { api, getToken, setToken } from './lib/api';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [
   {
@@ -135,6 +136,23 @@ export default function App() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
 
+  // Restore an existing session from a stored token on first load.
+  useEffect(() => {
+    if (!getToken()) return;
+    api.me()
+      .then((user) => {
+        setCurrentUser(user as CurrentUser);
+        setIsLoggedIn(true);
+        setActiveTab(readRoleAccess()[user.role][0] ?? 'dashboard');
+      })
+      .catch(() => setToken(null));
+  }, []);
+
+  function logout() {
+    setToken(null);
+    setIsLoggedIn(false);
+  }
+
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -227,7 +245,7 @@ export default function App() {
   return (
     <div className="flex h-screen bg-[var(--bg)] overflow-hidden">
       {/* Sidebar */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} role={currentUser.role} onLogout={() => setIsLoggedIn(false)} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} role={currentUser.role} onLogout={logout} />
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -354,7 +372,7 @@ export default function App() {
                       </>
                     )}
                     <button
-                      onClick={() => { setIsUserMenuOpen(false); setIsLoggedIn(false); }}
+                      onClick={() => { setIsUserMenuOpen(false); logout(); }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
                     >
                       <LogOut className="w-4 h-4" />

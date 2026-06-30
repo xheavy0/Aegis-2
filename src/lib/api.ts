@@ -1,13 +1,38 @@
-import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess, Control, EvidenceItem, AuditProgram, NotesWorkspace } from '../types';
+import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess, Control, EvidenceItem, AuditProgram, NotesWorkspace, AuthUser, LoginResponse } from '../types';
 
 const BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000') + '/api';
 
+const TOKEN_KEY = 'aegis.auth.token';
+
+export function getToken(): string | null {
+  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+}
+export function setToken(token: string | null): void {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch { /* ignore */ }
+}
+
+/** Thrown for 401s so the app can redirect to login. */
+export class UnauthorizedError extends Error {}
+
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
+  if (res.status === 401) {
+    setToken(null);
+    const data = await res.json().catch(() => ({}));
+    throw new UnauthorizedError(data.error ?? 'Unauthorized');
+  }
   if (res.status === 204) return undefined as T;
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? res.statusText);
@@ -15,6 +40,10 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 }
 
 export const api = {
+  // Auth
+  login: (email: string, password: string) => req<LoginResponse>('POST', '/auth/login', { email, password }),
+  me: () => req<AuthUser>('GET', '/auth/me'),
+
   // NIST
   getNist: () => req<NISTStatus[]>('GET', '/nist'),
   updateNist: (fn: string, body: Partial<NISTStatus>) => req<NISTStatus>('PUT', `/nist/${fn}`, body),
