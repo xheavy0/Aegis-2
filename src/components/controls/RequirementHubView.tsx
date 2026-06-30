@@ -1,13 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, CheckCircle2, Circle, AlertCircle, Filter, X,
   ShieldCheck, TrendingUp, AlertTriangle, Target, Users,
   FileText, ChevronRight, BarChart3, Layers, Lock, Eye,
   Radio, RotateCcw, RefreshCw, ClipboardList, Upload,
-  ExternalLink, Calendar, Tag, Zap, Award
+  ExternalLink, Calendar, Tag, Zap, Award, Clock
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { Control, ControlEvidence, ControlImplStatus, ControlMaturity, ControlPriority } from '@/src/types';
+import { api } from '@/src/lib/api';
 
 // ─── Frameworks ────────────────────────────────────────────────────────────────
 type FrameworkId = 'nist-csf2' | 'iso27001' | 'soc2' | 'gdpr' | 'pci-dss' | 'cmmc';
@@ -102,86 +104,12 @@ const FRAMEWORKS: Framework[] = [
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type CsfFunction = 'GOVERN' | 'IDENTIFY' | 'PROTECT' | 'DETECT' | 'RESPOND' | 'RECOVER';
-type ImplStatus  = 'Implemented' | 'Partial' | 'Not Started';
-type MaturityLvl = 0 | 1 | 2 | 3 | 4;
-type Priority    = 'Critical' | 'High' | 'Medium' | 'Low';
-
-interface Evidence { name: string; type: 'doc' | 'link'; date: string; }
-
-interface Control {
-  id: string;
-  function: CsfFunction;
-  category: string;
-  subcategory: string;
-  description: string;
-  status: ImplStatus;
-  maturity: MaturityLvl;
-  priority: Priority;
-  owner: string;
-  dueDate: string | null;
-  evidence: Evidence[];
-  linkedPolicies: string[];
-  notes: string;
-}
+type ImplStatus  = ControlImplStatus;
+type MaturityLvl = ControlMaturity;
+type Priority    = ControlPriority;
+type Evidence    = ControlEvidence;
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
-const CONTROLS: Control[] = [
-  // GOVERN
-  { id: 'GV.OC-01', function: 'GOVERN', category: 'Organizational Context', subcategory: 'Mission & Objectives', description: 'The organizational mission is understood and informs cybersecurity risk management.', status: 'Implemented', maturity: 4, priority: 'High', owner: 'CISO', dueDate: null, evidence: [{ name: 'Risk Strategy 2024.pdf', type: 'doc', date: '2024-02-10' }], linkedPolicies: ['POL-001'], notes: '' },
-  { id: 'GV.OC-02', function: 'GOVERN', category: 'Organizational Context', subcategory: 'Stakeholder Needs', description: 'Internal and external stakeholder needs are understood and considered in cybersecurity risk management.', status: 'Implemented', maturity: 3, priority: 'High', owner: 'CISO', dueDate: null, evidence: [{ name: 'Stakeholder Register.xlsx', type: 'doc', date: '2024-01-15' }], linkedPolicies: ['POL-001'], notes: '' },
-  { id: 'GV.OC-03', function: 'GOVERN', category: 'Organizational Context', subcategory: 'Legal & Regulatory', description: 'Legal, regulatory, and contractual requirements are understood and managed.', status: 'Partial', maturity: 2, priority: 'Critical', owner: 'Legal', dueDate: '2024-08-01', evidence: [], linkedPolicies: ['POL-004'], notes: 'GDPR mapping in progress' },
-  { id: 'GV.RM-01', function: 'GOVERN', category: 'Risk Management Strategy', subcategory: 'Risk Appetite', description: 'Risk management objectives are established and agreed to by organizational stakeholders.', status: 'Implemented', maturity: 4, priority: 'High', owner: 'Risk Team', dueDate: null, evidence: [{ name: 'Risk Appetite Statement.pdf', type: 'doc', date: '2024-03-01' }], linkedPolicies: ['POL-001'], notes: '' },
-  { id: 'GV.RM-02', function: 'GOVERN', category: 'Risk Management Strategy', subcategory: 'Risk Tolerance', description: 'Risk appetite and risk tolerance statements are established, communicated, and maintained.', status: 'Implemented', maturity: 3, priority: 'High', owner: 'Risk Team', dueDate: null, evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'GV.RM-03', function: 'GOVERN', category: 'Risk Management Strategy', subcategory: 'Risk Response', description: 'Cybersecurity risk management activities are included in enterprise risk management processes.', status: 'Partial', maturity: 2, priority: 'Medium', owner: 'Risk Team', dueDate: '2024-09-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'GV.SC-01', function: 'GOVERN', category: 'Supply Chain Risk', subcategory: 'Third-Party Policy', description: 'A cybersecurity supply chain risk management program is established.', status: 'Partial', maturity: 2, priority: 'High', owner: 'Procurement', dueDate: '2024-07-15', evidence: [], linkedPolicies: ['POL-006'], notes: '' },
-  { id: 'GV.SC-02', function: 'GOVERN', category: 'Supply Chain Risk', subcategory: 'Roles & Responsibilities', description: 'Cybersecurity roles for suppliers, customers, and partners are established.', status: 'Not Started', maturity: 0, priority: 'Medium', owner: 'Procurement', dueDate: '2024-10-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'GV.PO-01', function: 'GOVERN', category: 'Policy', subcategory: 'Policy Development', description: 'Policy for managing cybersecurity risks is established based on organizational context.', status: 'Implemented', maturity: 4, priority: 'High', owner: 'CISO', dueDate: null, evidence: [{ name: 'InfoSec Policy v2.4.pdf', type: 'doc', date: '2024-02-15' }], linkedPolicies: ['POL-001'], notes: '' },
-  { id: 'GV.PO-02', function: 'GOVERN', category: 'Policy', subcategory: 'Policy Review', description: 'Policy for managing cybersecurity risks is reviewed, updated, and communicated.', status: 'Implemented', maturity: 3, priority: 'Medium', owner: 'CISO', dueDate: null, evidence: [], linkedPolicies: ['POL-001'], notes: '' },
-
-  // IDENTIFY
-  { id: 'ID.AM-01', function: 'IDENTIFY', category: 'Asset Management', subcategory: 'Hardware Inventory', description: 'Inventories of hardware managed by the organization are maintained.', status: 'Partial', maturity: 2, priority: 'High', owner: 'IT Ops', dueDate: '2024-07-30', evidence: [{ name: 'Asset Inventory Q1.xlsx', type: 'doc', date: '2024-04-01' }], linkedPolicies: [], notes: 'CMDB migration ongoing' },
-  { id: 'ID.AM-02', function: 'IDENTIFY', category: 'Asset Management', subcategory: 'Software Inventory', description: 'Inventories of software, services, and systems managed by the organization are maintained.', status: 'Partial', maturity: 2, priority: 'High', owner: 'IT Ops', dueDate: '2024-07-30', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'ID.AM-03', function: 'IDENTIFY', category: 'Asset Management', subcategory: 'Network Mapping', description: 'Representations of authorized network communication and data flows are maintained.', status: 'Not Started', maturity: 0, priority: 'Medium', owner: 'NetOps', dueDate: '2024-09-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'ID.AM-05', function: 'IDENTIFY', category: 'Asset Management', subcategory: 'Asset Prioritization', description: 'Assets are prioritized based on classification, criticality, and mission impact.', status: 'Partial', maturity: 2, priority: 'High', owner: 'IT Ops', dueDate: '2024-08-15', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'ID.RA-01', function: 'IDENTIFY', category: 'Risk Assessment', subcategory: 'Vulnerability Identification', description: 'Vulnerabilities in assets are identified, validated, and recorded.', status: 'Implemented', maturity: 4, priority: 'Critical', owner: 'SecOps', dueDate: null, evidence: [{ name: 'Vuln Scan Report May.pdf', type: 'doc', date: '2024-05-01' }], linkedPolicies: ['POL-001'], notes: '' },
-  { id: 'ID.RA-02', function: 'IDENTIFY', category: 'Risk Assessment', subcategory: 'Threat Intelligence', description: 'Cyber threat intelligence is received from information sharing forums and sources.', status: 'Partial', maturity: 2, priority: 'High', owner: 'SecOps', dueDate: '2024-08-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'ID.RA-03', function: 'IDENTIFY', category: 'Risk Assessment', subcategory: 'Threat Identification', description: 'Internal and external threats to the organization are identified and recorded.', status: 'Implemented', maturity: 3, priority: 'High', owner: 'SecOps', dueDate: null, evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'ID.RA-05', function: 'IDENTIFY', category: 'Risk Assessment', subcategory: 'Risk Analysis', description: 'Threats, vulnerabilities, likelihoods, and impacts are used to understand inherent risk.', status: 'Implemented', maturity: 3, priority: 'High', owner: 'Risk Team', dueDate: null, evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'ID.IM-01', function: 'IDENTIFY', category: 'Improvement', subcategory: 'Lessons Learned', description: 'Improvements are identified from security assessments and exercises.', status: 'Not Started', maturity: 0, priority: 'Low', owner: 'CISO', dueDate: '2024-12-01', evidence: [], linkedPolicies: [], notes: '' },
-
-  // PROTECT
-  { id: 'PR.AA-01', function: 'PROTECT', category: 'Identity Management', subcategory: 'Identity & Credentials', description: 'Identities and credentials for authorized users, services, and hardware are managed.', status: 'Implemented', maturity: 4, priority: 'Critical', owner: 'IAM Team', dueDate: null, evidence: [{ name: 'IAM Policy.pdf', type: 'doc', date: '2024-01-20' }], linkedPolicies: ['POL-001'], notes: '' },
-  { id: 'PR.AA-02', function: 'PROTECT', category: 'Identity Management', subcategory: 'Identity Proofing', description: 'Identities are proofed and bound to credentials based on context of interactions.', status: 'Implemented', maturity: 3, priority: 'High', owner: 'IAM Team', dueDate: null, evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'PR.AA-03', function: 'PROTECT', category: 'Identity Management', subcategory: 'MFA', description: 'Users, services, and hardware are authenticated.', status: 'Partial', maturity: 2, priority: 'Critical', owner: 'IAM Team', dueDate: '2024-07-01', evidence: [], linkedPolicies: [], notes: 'MFA rollout 80% complete' },
-  { id: 'PR.AA-05', function: 'PROTECT', category: 'Identity Management', subcategory: 'Access Control', description: 'Access permissions and authorizations are defined, managed, enforced, and reviewed.', status: 'Partial', maturity: 2, priority: 'Critical', owner: 'IAM Team', dueDate: '2024-08-01', evidence: [], linkedPolicies: ['POL-001'], notes: '' },
-  { id: 'PR.DS-01', function: 'PROTECT', category: 'Data Security', subcategory: 'Data at Rest', description: 'The confidentiality, integrity, and availability of data-at-rest are protected.', status: 'Partial', maturity: 2, priority: 'Critical', owner: 'Security Eng', dueDate: '2024-07-15', evidence: [], linkedPolicies: ['POL-004'], notes: '' },
-  { id: 'PR.DS-02', function: 'PROTECT', category: 'Data Security', subcategory: 'Data in Transit', description: 'The confidentiality, integrity, and availability of data-in-transit are protected.', status: 'Implemented', maturity: 4, priority: 'Critical', owner: 'Security Eng', dueDate: null, evidence: [{ name: 'TLS Config Audit.pdf', type: 'doc', date: '2024-03-15' }], linkedPolicies: ['POL-004'], notes: '' },
-  { id: 'PR.DS-10', function: 'PROTECT', category: 'Data Security', subcategory: 'Data in Use', description: 'The confidentiality, integrity, and availability of data-in-use are protected.', status: 'Not Started', maturity: 0, priority: 'High', owner: 'Security Eng', dueDate: '2024-10-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'PR.PS-01', function: 'PROTECT', category: 'Platform Security', subcategory: 'Configuration Management', description: 'Configuration management practices are established and applied.', status: 'Partial', maturity: 2, priority: 'High', owner: 'IT Ops', dueDate: '2024-09-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'PR.PS-02', function: 'PROTECT', category: 'Platform Security', subcategory: 'Patch Management', description: 'Software is maintained, replaced, and removed commensurate with risk.', status: 'Partial', maturity: 2, priority: 'High', owner: 'IT Ops', dueDate: '2024-08-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'PR.IR-01', function: 'PROTECT', category: 'Technology Resilience', subcategory: 'Network Protection', description: 'Networks and environments are protected from unauthorized logical access.', status: 'Implemented', maturity: 4, priority: 'High', owner: 'NetOps', dueDate: null, evidence: [], linkedPolicies: [], notes: '' },
-
-  // DETECT
-  { id: 'DE.CM-01', function: 'DETECT', category: 'Continuous Monitoring', subcategory: 'Network Monitoring', description: 'Networks and network services are monitored to find potentially adverse events.', status: 'Partial', maturity: 2, priority: 'High', owner: 'SecOps', dueDate: '2024-07-01', evidence: [], linkedPolicies: [], notes: 'SIEM partially deployed' },
-  { id: 'DE.CM-02', function: 'DETECT', category: 'Continuous Monitoring', subcategory: 'Physical Monitoring', description: 'The physical environment is monitored to find potentially adverse events.', status: 'Not Started', maturity: 0, priority: 'Medium', owner: 'Facilities', dueDate: '2024-11-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'DE.CM-03', function: 'DETECT', category: 'Continuous Monitoring', subcategory: 'Personnel Monitoring', description: 'Personnel activity and technology usage are monitored to find potentially adverse events.', status: 'Partial', maturity: 2, priority: 'High', owner: 'SecOps', dueDate: '2024-08-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'DE.CM-06', function: 'DETECT', category: 'Continuous Monitoring', subcategory: 'External Service Monitoring', description: 'External service provider activities are monitored to find potentially adverse events.', status: 'Not Started', maturity: 0, priority: 'Medium', owner: 'SecOps', dueDate: '2024-10-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'DE.AE-02', function: 'DETECT', category: 'Adverse Event Analysis', subcategory: 'Event Analysis', description: 'Potentially adverse events are analyzed to better characterize them.', status: 'Partial', maturity: 2, priority: 'High', owner: 'SecOps', dueDate: '2024-08-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'DE.AE-03', function: 'DETECT', category: 'Adverse Event Analysis', subcategory: 'Event Correlation', description: 'Information is correlated from multiple sources.', status: 'Not Started', maturity: 0, priority: 'High', owner: 'SecOps', dueDate: '2024-09-01', evidence: [], linkedPolicies: [], notes: '' },
-
-  // RESPOND
-  { id: 'RS.MA-01', function: 'RESPOND', category: 'Incident Management', subcategory: 'Incident Handling', description: 'The incident response plan is executed in coordination with relevant third parties.', status: 'Implemented', maturity: 4, priority: 'Critical', owner: 'SecOps', dueDate: null, evidence: [{ name: 'IRP v3.1.pdf', type: 'doc', date: '2024-05-30' }], linkedPolicies: ['POL-003'], notes: '' },
-  { id: 'RS.MA-02', function: 'RESPOND', category: 'Incident Management', subcategory: 'Incident Triage', description: 'Incidents are triaged to support analysis, prioritization, and handling.', status: 'Implemented', maturity: 3, priority: 'High', owner: 'SecOps', dueDate: null, evidence: [], linkedPolicies: ['POL-003'], notes: '' },
-  { id: 'RS.AN-03', function: 'RESPOND', category: 'Incident Analysis', subcategory: 'Root Cause Analysis', description: 'Analysis is performed to establish what has taken place during an incident.', status: 'Implemented', maturity: 3, priority: 'High', owner: 'SecOps', dueDate: null, evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'RS.CO-02', function: 'RESPOND', category: 'Incident Reporting', subcategory: 'Stakeholder Communication', description: 'Internal and external stakeholders are notified of incidents.', status: 'Implemented', maturity: 4, priority: 'High', owner: 'SecOps', dueDate: null, evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'RS.MI-01', function: 'RESPOND', category: 'Incident Mitigation', subcategory: 'Containment', description: 'Incidents are contained.', status: 'Implemented', maturity: 4, priority: 'Critical', owner: 'SecOps', dueDate: null, evidence: [], linkedPolicies: [], notes: '' },
-
-  // RECOVER
-  { id: 'RC.RP-01', function: 'RECOVER', category: 'Recovery Planning', subcategory: 'Plan Execution', description: 'The recovery portion of the incident response plan is executed once initiated.', status: 'Implemented', maturity: 4, priority: 'Critical', owner: 'Operations', dueDate: null, evidence: [{ name: 'BCP v1.2.pdf', type: 'doc', date: '2024-05-01' }], linkedPolicies: ['POL-005'], notes: '' },
-  { id: 'RC.RP-02', function: 'RECOVER', category: 'Recovery Planning', subcategory: 'Plan Testing', description: 'Recovery actions are selected, scoped, prioritized, and performed.', status: 'Partial', maturity: 2, priority: 'High', owner: 'Operations', dueDate: '2024-09-01', evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'RC.CO-03', function: 'RECOVER', category: 'Recovery Communication', subcategory: 'Stakeholder Updates', description: 'Recovery activities and progress are communicated to designated stakeholders.', status: 'Implemented', maturity: 3, priority: 'Medium', owner: 'Comms', dueDate: null, evidence: [], linkedPolicies: [], notes: '' },
-  { id: 'RC.CO-04', function: 'RECOVER', category: 'Recovery Communication', subcategory: 'Public Relations', description: 'Public updates on incident recovery are shared using approved methods and messaging.', status: 'Not Started', maturity: 0, priority: 'Low', owner: 'Comms', dueDate: '2024-12-01', evidence: [], linkedPolicies: [], notes: '' },
-];
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const CSF_FUNCTIONS: { key: CsfFunction; label: string; icon: React.ReactNode; color: string; bg: string; border: string }[] = [
@@ -522,6 +450,18 @@ export function RequirementHubView() {
   const [filterStatus, setFilterStatus] = useState<ImplStatus | 'All'>('All');
   const [filterPriority, setFilterPriority] = useState<Priority | 'All'>('All');
   const [selected, setSelected]       = useState<Control | null>(null);
+  const [CONTROLS, setControls]       = useState<Control[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    api.getControls()
+      .then(data => { if (active) { setControls(data); setError(null); } })
+      .catch(err => { if (active) setError(err.message ?? 'Failed to load controls'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const activeFw = FRAMEWORKS.find(f => f.id === activeFramework)!;
 
@@ -541,14 +481,14 @@ export function RequirementHubView() {
     const matchSearch   = !search || [c.id, c.category, c.subcategory, c.description, c.owner]
       .some(f => f.toLowerCase().includes(search.toLowerCase()));
     return matchFn && matchStatus && matchPriority && matchSearch;
-  }), [search, filterFn, filterStatus, filterPriority]);
+  }), [CONTROLS, search, filterFn, filterStatus, filterPriority]);
 
   // Function coverage map
   const fnControls = useMemo(() => {
     const map: Record<string, Control[]> = {};
     CSF_FUNCTIONS.forEach(f => { map[f.key] = CONTROLS.filter(c => c.function === f.key); });
     return map;
-  }, []);
+  }, [CONTROLS]);
 
   return (
     <div className="space-y-6 pb-10">
@@ -557,6 +497,17 @@ export function RequirementHubView() {
         <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-none">Requirement Hub</h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">Select a compliance framework to view and track its requirements</p>
       </div>
+
+      {loading && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <Clock className="w-4 h-4 animate-spin" /> Loading controls…
+        </div>
+      )}
+      {error && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      )}
 
       {/* Framework Selector */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">

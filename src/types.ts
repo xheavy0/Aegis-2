@@ -204,3 +204,29 @@ export interface BIAProcess {
   description: string;
   hourlyLoss: number;
 }
+
+export type ControlImplStatus = 'Implemented' | 'Partial' | 'Not Started';
+export type ControlMaturity = 0 | 1 | 2 | 3 | 4;
+export type ControlPriority = 'Critical' | 'High' | 'Medium' | 'Low';
+
+export interface ControlEvidence {
+  name: string;
+  type: 'doc' | 'link';
+  date: string;
+}
+
+export interface Control {
+  id: string;
+  function: NISTFunction;
+  category: string;
+  subcategory: string;
+  description: string;
+  status: ControlImplStatus;
+  maturity: ControlMaturity;
+  priority: ControlPriority;
+  owner: string;
+  dueDate: string | null;
+  evidence: ControlEvidence[];
+  linkedPolicies: string[];
+  notes: string;
+}
