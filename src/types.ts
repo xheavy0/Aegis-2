@@ -182,3 +182,25 @@ export interface Asset {
   lastSeen: string;
   tags: string[];
 }
+
+export type BIACriticality = 'Critical' | 'High' | 'Medium' | 'Low';
+export type BIAImpactLevel = 'Catastrophic' | 'Major' | 'Moderate' | 'Minor' | 'Negligible';
+
+export interface BIAProcess {
+  id: string;
+  name: string;
+  department: string;
+  owner: string;
+  criticality: BIACriticality;
+  rtoHours: number;
+  rpoHours: number;
+  mtpdHours: number;
+  currentRTOHours: number;
+  financialImpact: BIAImpactLevel;
+  operationalImpact: BIAImpactLevel;
+  reputationalImpact: BIAImpactLevel;
+  regulatoryImpact: BIAImpactLevel;
+  dependencies: string[];
+  description: string;
+  hourlyLoss: number;
+}
