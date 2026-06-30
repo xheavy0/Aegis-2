@@ -1,4 +1,4 @@
-import { NISTStatus, Vendor, Task, CalendarEvent } from './types';
+import { NISTStatus, Vendor, CalendarEvent } from './types';
 
 export const NIST_CSF_FUNCTIONS = [
   { id: 'GOVERN', label: 'Govern', color: '#6366F1', description: 'Establish the organizations mission, stakeholder expectations, and legal requirements.' },
@@ -21,13 +21,6 @@ export const MOCK_NIST_STATUS: NISTStatus[] = [
 export const MOCK_VENDORS: Vendor[] = [
   { id: 'V-001', name: 'CloudOps Pro', criticality: 'Tier 1', complianceStatus: 'Compliant', lastAssessment: '2023-11-12' },
   { id: 'V-002', name: 'SecurityFlow Inc', criticality: 'Tier 2', complianceStatus: 'Pending', lastAssessment: '2024-01-05' },
-];
-
-export const MOCK_TASKS: Task[] = [
-  { id: 'T-001', title: 'Update Firewall Rules', description: 'Review and update egress filtering rules for AWS VPCs.', dueDate: '2024-05-15', status: 'In Progress', priority: 'High', assignee: 'Alex C.' },
-  { id: 'T-002', title: 'User Access Review', description: 'Quarterly review of IAM permissions for core infrastructure.', dueDate: '2024-05-20', status: 'Todo', priority: 'Medium', assignee: 'Sarah L.' },
-  { id: 'T-003', title: 'SOC 2 Evidence Export', description: 'Export control evidence for Trust Services Criteria assessment.', dueDate: '2024-05-10', status: 'Completed', priority: 'High', assignee: 'Alex C.' },
-  { id: 'T-004', title: 'Third-party Risk Assessment', description: 'Complete due diligence for New Vendor Alpha.', dueDate: '2024-05-25', status: 'Todo', priority: 'Low', assignee: 'Unassigned' },
 ];
 
 export const MOCK_CALENDAR_EVENTS: CalendarEvent[] = [
