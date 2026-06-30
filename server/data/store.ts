@@ -495,3 +495,49 @@ export function nextId(prefix: 'R' | 'F' | 'V' | 'T' | 'E' | 'N'): string {
   const pad = prefix === 'R' || prefix === 'F' ? 3 : prefix === 'N' ? 4 : 3;
   return `${prefix}-${String(counters[prefix]).padStart(pad, '0')}`;
 }
+
+// ─── SQLite persistence (write-through document store) ──────────────────────────
+import { db } from '../db.js';
+
+db.exec(`CREATE TABLE IF NOT EXISTS collections (name TEXT PRIMARY KEY, data TEXT NOT NULL);`);
+
+/** Snapshot every in-memory collection into SQLite as JSON blobs. */
+export function snapshot(): void {
+  const data: Record<string, unknown> = {
+    nistStatus, risks, findings, vendors, tasks, calendarEvents,
+    policies, controls, evidenceItems, auditPrograms, noteFolders, notes,
+    notifications, assets, biaProcesses, counters,
+  };
+  const upsert = db.prepare(
+    'INSERT INTO collections (name, data) VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET data = excluded.data'
+  );
+  for (const [name, value] of Object.entries(data)) {
+    upsert.run(name, JSON.stringify(value));
+  }
+}
+
+/** Load collections from SQLite on boot; if the DB is empty, persist the seeds. */
+export function hydrate(): void {
+  const rows = db.prepare('SELECT name, data FROM collections').all() as unknown as { name: string; data: string }[];
+  if (rows.length === 0) {
+    snapshot();
+    return;
+  }
+  const map = new Map(rows.map(r => [r.name, JSON.parse(r.data)]));
+  if (map.has('nistStatus')) nistStatus = map.get('nistStatus');
+  if (map.has('risks')) risks = map.get('risks');
+  if (map.has('findings')) findings = map.get('findings');
+  if (map.has('vendors')) vendors = map.get('vendors');
+  if (map.has('tasks')) tasks = map.get('tasks');
+  if (map.has('calendarEvents')) calendarEvents = map.get('calendarEvents');
+  if (map.has('policies')) policies = map.get('policies');
+  if (map.has('controls')) controls = map.get('controls');
+  if (map.has('evidenceItems')) evidenceItems = map.get('evidenceItems');
+  if (map.has('auditPrograms')) auditPrograms = map.get('auditPrograms');
+  if (map.has('noteFolders')) noteFolders = map.get('noteFolders');
+  if (map.has('notes')) notes = map.get('notes');
+  if (map.has('notifications')) notifications = map.get('notifications');
+  if (map.has('assets')) assets = map.get('assets');
+  if (map.has('biaProcesses')) biaProcesses = map.get('biaProcesses');
+  if (map.has('counters')) counters = map.get('counters');
+}
