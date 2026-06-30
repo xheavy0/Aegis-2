@@ -33,13 +33,26 @@ export interface Risk {
   linkedControls: number;
 }
 
+export type FindingSeverity = 'Critical' | 'High' | 'Medium' | 'Low' | 'Info';
+export type FindingStatus = 'Open' | 'In Progress' | 'In Review' | 'Resolved' | 'Accepted' | 'False Positive';
+export type FindingCategory = 'Access Control' | 'Data Protection' | 'Vulnerability' | 'Configuration' | 'Compliance' | 'Audit';
+
 export interface Finding {
   id: string;
+  title: string;
   description: string;
-  severity: 'Critical' | 'High' | 'Medium' | 'Low';
-  source: 'Active Directory' | 'Okta' | 'Tenable' | 'Manual';
-  status: 'Open' | 'Resolved' | 'Risk Accepted';
+  severity: FindingSeverity;
+  category: FindingCategory;
+  source: string;
+  status: FindingStatus;
+  owner: string;
   dateFound: string;
+  dueDate: string;
+  slaBreached: boolean;
+  daysOpen: number;
+  affectedAsset: string;
+  evidenceCount: number;
+  remediationNotes: string;
 }
 
 export interface Vendor {

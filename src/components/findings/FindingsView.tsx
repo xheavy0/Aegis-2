@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, X, ShieldAlert, CheckCircle2, Clock, AlertTriangle,
   Activity, ChevronRight, Database, FileText, User, AlertCircle,
@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { AppNotification } from '@/src/types';
+import { AppNotification, Finding, FindingSeverity, FindingStatus, FindingCategory } from '@/src/types';
+import { api } from '@/src/lib/api';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
   CartesianGrid, Cell, PieChart, Pie
@@ -14,140 +15,14 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Severity   = 'Critical' | 'High' | 'Medium' | 'Low' | 'Info';
-type FindStatus = 'Open' | 'In Progress' | 'In Review' | 'Resolved' | 'Accepted' | 'False Positive';
-type Category   = 'Access Control' | 'Data Protection' | 'Vulnerability' | 'Configuration' | 'Compliance' | 'Audit';
-
-interface Finding {
-  id: string;
-  title: string;
-  description: string;
-  severity: Severity;
-  category: Category;
-  source: string;
-  status: FindStatus;
-  owner: string;
-  dateFound: string;
-  dueDate: string;
-  slaBreached: boolean;
-  daysOpen: number;
-  affectedAsset: string;
-  evidenceCount: number;
-  remediationNotes: string;
-}
+type Severity   = FindingSeverity;
+type FindStatus = FindingStatus;
+type Category   = FindingCategory;
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 // SLA thresholds (days): Critical=1, High=3, Medium=30, Low=90
 const SLA_DAYS: Record<Severity, number> = { Critical: 1, High: 3, Medium: 30, Low: 90, Info: 180 };
-
-const FINDINGS: Finding[] = [
-  {
-    id: 'F-501', title: 'Critical CVE-2024-1234 on API Gateway', severity: 'Critical', category: 'Vulnerability',
-    description: 'A remotely exploitable RCE vulnerability in the API gateway software (v2.4.1) is actively being exploited in the wild. CVSS 9.8.',
-    source: 'Tenable.io', status: 'In Progress', owner: 'David M.',
-    dateFound: '2026-05-06', dueDate: '2026-05-07', slaBreached: true, daysOpen: 3,
-    affectedAsset: 'aws-ec2-api-prod', evidenceCount: 4, remediationNotes: 'Emergency patching ticket raised. Compensating WAF rule deployed.',
-  },
-  {
-    id: 'F-502', title: 'MFA Not Enforced for Privileged Accounts', severity: 'Critical', category: 'Access Control',
-    description: '14 privileged admin accounts in production do not have MFA enforced, creating significant credential-based attack risk.',
-    source: 'Manual Audit', status: 'In Progress', owner: 'Alex C.',
-    dateFound: '2026-05-01', dueDate: '2026-05-02', slaBreached: true, daysOpen: 8,
-    affectedAsset: 'Active Directory / Okta', evidenceCount: 2, remediationNotes: 'Enforcement policy being rolled out in phases. 6 of 14 accounts remediated.',
-  },
-  {
-    id: 'F-503', title: 'Unencrypted Sensitive Data in S3 Bucket', severity: 'High', category: 'Data Protection',
-    description: 'Customer PII found in an S3 bucket without server-side encryption or bucket policy restrictions. Bucket is not publicly exposed.',
-    source: 'AWS Security Hub', status: 'In Progress', owner: 'Elena R.',
-    dateFound: '2026-05-04', dueDate: '2026-05-07', slaBreached: true, daysOpen: 5,
-    affectedAsset: 's3://prod-customer-exports', evidenceCount: 3, remediationNotes: 'Encryption policy applied. Data migration to encrypted bucket in progress.',
-  },
-  {
-    id: 'F-504', title: 'Stale Admin Accounts Not Disabled (90+ days)', severity: 'High', category: 'Access Control',
-    description: '23 inactive user accounts with elevated permissions have not been disabled despite exceeding the 90-day dormancy threshold.',
-    source: 'Active Directory', status: 'Open', owner: 'Alex C.',
-    dateFound: '2026-04-28', dueDate: '2026-05-01', slaBreached: true, daysOpen: 11,
-    affectedAsset: 'corp.internal / Azure AD', evidenceCount: 1, remediationNotes: '',
-  },
-  {
-    id: 'F-505', title: 'Missing WAF Rules for OWASP Top 10', severity: 'High', category: 'Configuration',
-    description: 'Web Application Firewall rules for SQLi, XSS, and path traversal are not enabled on the customer-facing portal.',
-    source: 'Pen Test (Q1 2026)', status: 'In Progress', owner: 'David M.',
-    dateFound: '2026-03-15', dueDate: '2026-04-15', slaBreached: true, daysOpen: 55,
-    affectedAsset: 'prod-web-01, prod-web-02', evidenceCount: 5, remediationNotes: 'WAF rule set review in progress. Staging environment tested.',
-  },
-  {
-    id: 'F-506', title: 'TLS 1.0/1.1 Still Enabled on Load Balancer', severity: 'Medium', category: 'Configuration',
-    description: 'Legacy TLS versions 1.0 and 1.1 remain enabled on the production load balancer, exposing connections to POODLE/BEAST attacks.',
-    source: 'Qualys SSL Labs', status: 'In Review', owner: 'David M.',
-    dateFound: '2026-04-01', dueDate: '2026-05-01', slaBreached: true, daysOpen: 38,
-    affectedAsset: 'lb-prod-01', evidenceCount: 2, remediationNotes: 'Config change submitted. Awaiting change advisory board approval.',
-  },
-  {
-    id: 'F-507', title: 'Logging Disabled on Production Database', severity: 'Medium', category: 'Compliance',
-    description: 'Audit logging is not enabled on the primary production database, violating PCI DSS Requirement 10 and internal policy.',
-    source: 'Internal Audit', status: 'Open', owner: 'Elena R.',
-    dateFound: '2026-04-15', dueDate: '2026-05-15', slaBreached: false, daysOpen: 24,
-    affectedAsset: 'prod-db-primary', evidenceCount: 1, remediationNotes: '',
-  },
-  {
-    id: 'F-508', title: 'API Keys Without Rotation Policy', severity: 'Medium', category: 'Access Control',
-    description: 'Service account API keys in use have not been rotated in over 180 days and have no automated rotation configured.',
-    source: 'CrowdStrike Falcon', status: 'Open', owner: 'Alex C.',
-    dateFound: '2026-04-20', dueDate: '2026-05-20', slaBreached: false, daysOpen: 19,
-    affectedAsset: 'AWS IAM / GitHub Actions', evidenceCount: 2, remediationNotes: '',
-  },
-  {
-    id: 'F-509', title: 'Missing Data Processing Agreement — Sub-Processor', severity: 'Medium', category: 'Compliance',
-    description: 'A recently onboarded analytics sub-processor does not have a signed DPA in place, violating GDPR Article 28.',
-    source: 'Legal Review', status: 'In Review', owner: 'Sarah L.',
-    dateFound: '2026-04-22', dueDate: '2026-05-22', slaBreached: false, daysOpen: 17,
-    affectedAsset: 'AI Insights Co', evidenceCount: 1, remediationNotes: 'DPA draft sent for review. Vendor legal team responding.',
-  },
-  {
-    id: 'F-510', title: 'Unauthorised Port Open on Firewall (Port 3389)', severity: 'High', category: 'Configuration',
-    description: 'RDP port 3389 is open to the internet on a non-bastion server, significantly increasing the attack surface.',
-    source: 'Tenable.io', status: 'Open', owner: 'David M.',
-    dateFound: '2026-05-05', dueDate: '2026-05-08', slaBreached: true, daysOpen: 4,
-    affectedAsset: 'prod-web-02 (10.0.1.14)', evidenceCount: 2, remediationNotes: '',
-  },
-  {
-    id: 'F-511', title: 'Backup Integrity Verification Not Scheduled', severity: 'Medium', category: 'Compliance',
-    description: 'No automated restore testing is in place for production database backups. Last manual test was 8 months ago.',
-    source: 'Internal Audit', status: 'Open', owner: 'David M.',
-    dateFound: '2026-03-30', dueDate: '2026-04-30', slaBreached: true, daysOpen: 40,
-    affectedAsset: 'CloudBackup Plus / prod-db-*', evidenceCount: 0, remediationNotes: '',
-  },
-  {
-    id: 'F-512', title: 'Security Awareness Training Completion Below 80%', severity: 'Low', category: 'Compliance',
-    description: 'Only 67% of employees have completed mandatory annual security awareness training. Target is 95% by Q2.',
-    source: 'LMS Report', status: 'In Progress', owner: 'Sarah L.',
-    dateFound: '2026-04-01', dueDate: '2026-06-30', slaBreached: false, daysOpen: 38,
-    affectedAsset: 'All Staff (312 employees)', evidenceCount: 1, remediationNotes: 'Reminder campaign launched. Manager escalation initiated for non-completions.',
-  },
-  {
-    id: 'F-513', title: 'Endpoint DLP Not Deployed on 22 Devices', severity: 'Medium', category: 'Data Protection',
-    description: 'DLP agent not installed on 22 employee endpoints, leaving data exfiltration risk unmitigated on those devices.',
-    source: 'CrowdStrike Falcon', status: 'Open', owner: 'David M.',
-    dateFound: '2026-05-02', dueDate: '2026-06-02', slaBreached: false, daysOpen: 7,
-    affectedAsset: '22 x macOS endpoints', evidenceCount: 1, remediationNotes: '',
-  },
-  {
-    id: 'F-514', title: 'CVE-2025-8812 Low Severity on Internal Tool', severity: 'Low', category: 'Vulnerability',
-    description: 'A low-severity local privilege escalation vulnerability in an internal reporting tool. Not externally accessible.',
-    source: 'Tenable.io', status: 'Accepted', owner: 'Alex C.',
-    dateFound: '2026-02-10', dueDate: '2026-08-10', slaBreached: false, daysOpen: 89,
-    affectedAsset: 'internal-reporting-v3', evidenceCount: 2, remediationNotes: 'Risk accepted. Not internet-facing, compensating access controls in place.',
-  },
-  {
-    id: 'F-515', title: 'Missing SOC 2 Mapping for New Control Set', severity: 'Low', category: 'Audit',
-    description: 'Control changes from Q4 2025 have not been mapped to SOC 2 Trust Service Criteria in the GRC system.',
-    source: 'Internal Audit', status: 'In Progress', owner: 'Sarah L.',
-    dateFound: '2026-04-05', dueDate: '2026-05-31', slaBreached: false, daysOpen: 34,
-    affectedAsset: 'GRC Platform / Control Library', evidenceCount: 0, remediationNotes: 'Mapping exercise underway. 14 of 28 controls mapped.',
-  },
-];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -296,11 +171,35 @@ type Tab = typeof TABS[number];
 
 export function FindingsView({ onNotify }: FindingsViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
-  const [findings, setFindings] = useState<Finding[]>(FINDINGS);
+  const [findings, setFindings] = useState<Finding[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
   const [search, setSearch] = useState('');
   const [filterSev, setFilterSev] = useState<Severity | 'All'>('All');
   const [filterStatus, setFilterStatus] = useState<FindStatus | 'All'>('All');
+
+  useEffect(() => {
+    let active = true;
+    api.getFindings()
+      .then(data => { if (active) { setFindings(data); setError(null); } })
+      .catch(err => { if (active) setError(err.message ?? 'Failed to load findings'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  async function persistUpdate(updated: Finding) {
+    const prev = findings;
+    setFindings(p => p.map(f => f.id === updated.id ? updated : f));
+    setSelectedFinding(s => s && s.id === updated.id ? updated : s);
+    try {
+      const saved = await api.updateFinding(updated.id, updated);
+      setFindings(p => p.map(f => f.id === saved.id ? saved : f));
+    } catch (err) {
+      setFindings(prev);
+      setError(err instanceof Error ? err.message : 'Failed to save finding');
+    }
+  }
 
   const stats = useMemo(() => {
     const open      = findings.filter(f => f.status === 'Open').length;
@@ -346,6 +245,17 @@ export function FindingsView({ onNotify }: FindingsViewProps) {
         </div>
         <button className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" />Register Finding</button>
       </header>
+
+      {loading && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <Clock className="w-4 h-4 animate-spin" /> Loading findings…
+        </div>
+      )}
+      {error && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      )}
 
       {/* KPI Strip */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -630,7 +540,7 @@ export function FindingsView({ onNotify }: FindingsViewProps) {
       <AnimatePresence>
         {selectedFinding && (
           <FindingDetail finding={selectedFinding} onClose={() => setSelectedFinding(null)}
-            onUpdate={updated => setFindings(prev => prev.map(f => f.id === updated.id ? updated : f))} />
+            onUpdate={updated => { void persistUpdate(updated); }} />
         )}
       </AnimatePresence>
     </div>
