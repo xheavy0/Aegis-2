@@ -1,4 +1,4 @@
-import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification } from '../types';
+import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy } from '../types';
 
 const BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000') + '/api';
 
@@ -53,6 +53,13 @@ export const api = {
   createEvent: (body: Omit<CalendarEvent, 'id'>) => req<CalendarEvent>('POST', '/calendar', body),
   updateEvent: (id: string, body: Partial<CalendarEvent>) => req<CalendarEvent>('PUT', `/calendar/${id}`, body),
   deleteEvent: (id: string) => req<void>('DELETE', `/calendar/${id}`),
+
+  // Policies
+  getPolicies: () => req<Policy[]>('GET', '/policies'),
+  getPolicy: (id: string) => req<Policy>('GET', `/policies/${id}`),
+  createPolicy: (body: Omit<Policy, 'id'>) => req<Policy>('POST', '/policies', body),
+  updatePolicy: (id: string, body: Partial<Policy>) => req<Policy>('PUT', `/policies/${id}`, body),
+  deletePolicy: (id: string) => req<void>('DELETE', `/policies/${id}`),
 
   // Notifications
   getNotifications: (audience?: string) =>

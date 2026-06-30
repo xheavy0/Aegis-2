@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   FileText, Clock, Users, ArrowRight, CheckCircle2, Plus, X, ShieldCheck,
   History, ExternalLink, Search, Filter, ChevronRight, AlertTriangle,
@@ -8,192 +8,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-type PolicyStatus = 'Draft' | 'Under Review' | 'Approved' | 'Published' | 'Archived';
-type PolicyCategory = 'Security' | 'Privacy' | 'HR' | 'Operations' | 'Compliance';
-
-interface PolicyVersion {
-  version: string;
-  date: string;
-  author: string;
-  summary: string;
-}
-
-interface Attestation {
-  name: string;
-  role: string;
-  date: string | null;
-  status: 'Confirmed' | 'Pending' | 'Overdue';
-}
-
-interface Policy {
-  id: string;
-  title: string;
-  version: string;
-  owner: string;
-  status: PolicyStatus;
-  category: PolicyCategory;
-  nextReview: string;
-  lastUpdated: string;
-  description: string;
-  frameworks: { code: string; name: string }[];
-  versions: PolicyVersion[];
-  attestations: Attestation[];
-  exceptions: number;
-}
+import { Policy, PolicyStatus, PolicyCategory } from '@/src/types';
+import { api } from '@/src/lib/api';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
-const POLICIES: Policy[] = [
-  {
-    id: 'POL-001',
-    title: 'Information Security Policy',
-    version: 'v2.4',
-    owner: 'CISO',
-    status: 'Published',
-    category: 'Security',
-    nextReview: '2024-10-15',
-    lastUpdated: '2024-02-15',
-    description: 'Governs all information security practices and responsibilities across the organization. Establishes the security framework, roles, and accountability structure.',
-    frameworks: [
-      { code: 'AC-1', name: 'Access Control Policy' },
-      { code: 'AT-1', name: 'Awareness & Training' },
-      { code: 'CA-1', name: 'Security Assessment' },
-      { code: 'ISO 27001', name: 'A.5.1 - Information Security Policies' },
-    ],
-    versions: [
-      { version: 'v2.4', date: '2024-02-15', author: 'Jane Smith', summary: 'Updated cloud security provisions' },
-      { version: 'v2.3', date: '2023-09-01', author: 'John Doe', summary: 'Added remote work guidelines' },
-      { version: 'v2.2', date: '2023-01-20', author: 'Jane Smith', summary: 'Annual review update' },
-    ],
-    attestations: [
-      { name: 'Alice Chen', role: 'Engineering Lead', date: '2024-02-20', status: 'Confirmed' },
-      { name: 'Bob Martin', role: 'Product Manager', date: '2024-02-22', status: 'Confirmed' },
-      { name: 'Carol White', role: 'HR Director', date: null, status: 'Pending' },
-      { name: 'David Kim', role: 'Sales Director', date: null, status: 'Overdue' },
-    ],
-    exceptions: 2,
-  },
-  {
-    id: 'POL-002',
-    title: 'Acceptable Use Policy',
-    version: 'v1.8',
-    owner: 'HR / Security',
-    status: 'Published',
-    category: 'HR',
-    nextReview: '2024-11-30',
-    lastUpdated: '2024-01-10',
-    description: 'Sets expectations for employees regarding acceptable use of corporate assets, networks, and information systems.',
-    frameworks: [
-      { code: 'PS-1', name: 'Personnel Security Policy' },
-      { code: 'PL-4', name: 'Rules of Behavior' },
-    ],
-    versions: [
-      { version: 'v1.8', date: '2024-01-10', author: 'HR Team', summary: 'Social media policy update' },
-      { version: 'v1.7', date: '2023-06-15', author: 'HR Team', summary: 'BYOD additions' },
-    ],
-    attestations: [
-      { name: 'Alice Chen', role: 'Engineering Lead', date: '2024-01-15', status: 'Confirmed' },
-      { name: 'Bob Martin', role: 'Product Manager', date: '2024-01-16', status: 'Confirmed' },
-      { name: 'Carol White', role: 'HR Director', date: '2024-01-14', status: 'Confirmed' },
-      { name: 'David Kim', role: 'Sales Director', date: null, status: 'Pending' },
-    ],
-    exceptions: 0,
-  },
-  {
-    id: 'POL-003',
-    title: 'Incident Response Plan',
-    version: 'v3.1',
-    owner: 'Security Ops',
-    status: 'Under Review',
-    category: 'Security',
-    nextReview: '2024-07-01',
-    lastUpdated: '2024-05-30',
-    description: 'Defines procedures for identifying, containing, eradicating, and recovering from security incidents. Establishes escalation paths and communication protocols.',
-    frameworks: [
-      { code: 'IR-1', name: 'Incident Response Policy' },
-      { code: 'IR-8', name: 'Incident Response Plan' },
-      { code: 'DE.AE', name: 'NIST CSF - Anomalies & Events' },
-    ],
-    versions: [
-      { version: 'v3.1', date: '2024-05-30', author: 'SecOps Team', summary: 'Ransomware playbook added' },
-      { version: 'v3.0', date: '2024-01-01', author: 'SecOps Team', summary: 'Major restructure' },
-    ],
-    attestations: [
-      { name: 'Alice Chen', role: 'Engineering Lead', date: null, status: 'Pending' },
-      { name: 'Bob Martin', role: 'Product Manager', date: null, status: 'Pending' },
-    ],
-    exceptions: 1,
-  },
-  {
-    id: 'POL-004',
-    title: 'Data Privacy Policy (GDPR)',
-    version: 'v2.0',
-    owner: 'Legal / DPO',
-    status: 'Published',
-    category: 'Privacy',
-    nextReview: '2025-01-15',
-    lastUpdated: '2024-01-15',
-    description: 'Standards for collecting, processing, and storing personal data of EU citizens in compliance with GDPR requirements.',
-    frameworks: [
-      { code: 'PT-1', name: 'PII Processing Policy' },
-      { code: 'SC-28', name: 'Protection of Data at Rest' },
-      { code: 'GDPR Art.5', name: 'Principles of Processing' },
-    ],
-    versions: [
-      { version: 'v2.0', date: '2024-01-15', author: 'Legal Team', summary: 'GDPR 2024 amendments' },
-      { version: 'v1.9', date: '2023-05-25', author: 'DPO Office', summary: 'Breach notification update' },
-    ],
-    attestations: [
-      { name: 'Alice Chen', role: 'Engineering Lead', date: '2024-01-20', status: 'Confirmed' },
-      { name: 'Carol White', role: 'HR Director', date: '2024-01-21', status: 'Confirmed' },
-      { name: 'David Kim', role: 'Sales Director', date: null, status: 'Overdue' },
-    ],
-    exceptions: 0,
-  },
-  {
-    id: 'POL-005',
-    title: 'Business Continuity Plan',
-    version: 'v1.2',
-    owner: 'Operations',
-    status: 'Draft',
-    category: 'Operations',
-    nextReview: '2024-09-01',
-    lastUpdated: '2024-05-01',
-    description: 'Framework for maintaining and restoring business operations following a disruptive event. Covers RTO/RPO targets and recovery procedures.',
-    frameworks: [
-      { code: 'CP-1', name: 'Contingency Planning Policy' },
-      { code: 'CP-2', name: 'Contingency Plan' },
-    ],
-    versions: [
-      { version: 'v1.2', date: '2024-05-01', author: 'Ops Team', summary: 'Cloud DR added' },
-    ],
-    attestations: [],
-    exceptions: 0,
-  },
-  {
-    id: 'POL-006',
-    title: 'Vendor Risk Management Policy',
-    version: 'v1.0',
-    owner: 'Procurement',
-    status: 'Approved',
-    category: 'Compliance',
-    nextReview: '2025-03-01',
-    lastUpdated: '2024-03-01',
-    description: 'Requirements for assessing, onboarding, and monitoring third-party vendors with access to corporate systems or data.',
-    frameworks: [
-      { code: 'SA-12', name: 'Supply Chain Protection' },
-      { code: 'SR-1', name: 'Supply Chain Risk Management' },
-    ],
-    versions: [
-      { version: 'v1.0', date: '2024-03-01', author: 'Procurement', summary: 'Initial release' },
-    ],
-    attestations: [
-      { name: 'Alice Chen', role: 'Engineering Lead', date: '2024-03-10', status: 'Confirmed' },
-    ],
-    exceptions: 3,
-  },
-];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LIFECYCLE_STAGES: PolicyStatus[] = ['Draft', 'Under Review', 'Approved', 'Published', 'Archived'];
@@ -547,31 +365,43 @@ function PolicyDetailPanel({ policy, onClose }: { policy: Policy; onClose: () =>
 
 // ─── Main View ────────────────────────────────────────────────────────────────
 export function PoliciesView() {
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Policy | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<PolicyStatus | 'All'>('All');
   const [categoryFilter, setCategoryFilter] = useState<PolicyCategory | 'All'>('All');
 
-  const stats = useMemo(() => ({
-    total: POLICIES.length,
-    published: POLICIES.filter(p => p.status === 'Published').length,
-    underReview: POLICIES.filter(p => p.status === 'Under Review').length,
-    expiringSoon: POLICIES.filter(p => daysUntil(p.nextReview) <= 60 && daysUntil(p.nextReview) > 0).length,
-    overdue: POLICIES.filter(p => daysUntil(p.nextReview) < 0).length,
-  }), []);
+  useEffect(() => {
+    let active = true;
+    api.getPolicies()
+      .then(data => { if (active) { setPolicies(data); setError(null); } })
+      .catch(err => { if (active) setError(err.message ?? 'Failed to load policies'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
-  const filtered = useMemo(() => POLICIES.filter(p => {
+  const stats = useMemo(() => ({
+    total: policies.length,
+    published: policies.filter(p => p.status === 'Published').length,
+    underReview: policies.filter(p => p.status === 'Under Review').length,
+    expiringSoon: policies.filter(p => daysUntil(p.nextReview) <= 60 && daysUntil(p.nextReview) > 0).length,
+    overdue: policies.filter(p => daysUntil(p.nextReview) < 0).length,
+  }), [policies]);
+
+  const filtered = useMemo(() => policies.filter(p => {
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.id.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'All' || p.status === statusFilter;
     const matchCat = categoryFilter === 'All' || p.category === categoryFilter;
     return matchSearch && matchStatus && matchCat;
-  }), [search, statusFilter, categoryFilter]);
+  }), [policies, search, statusFilter, categoryFilter]);
 
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { All: POLICIES.length };
-    LIFECYCLE_STAGES.forEach(s => { counts[s] = POLICIES.filter(p => p.status === s).length; });
+    const counts: Record<string, number> = { All: policies.length };
+    LIFECYCLE_STAGES.forEach(s => { counts[s] = policies.filter(p => p.status === s).length; });
     return counts;
-  }, []);
+  }, [policies]);
 
   return (
     <div className="space-y-6 pb-10">
@@ -587,10 +417,21 @@ export function PoliciesView() {
         </button>
       </header>
 
+      {loading && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <Clock className="w-4 h-4 animate-spin" /> Loading policies…
+        </div>
+      )}
+      {error && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={<FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />} label="Total Policies" value={stats.total} color="bg-blue-50 dark:bg-blue-900/20" />
-        <StatCard icon={<FileCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />} label="Published" value={stats.published} sub={`${POLICIES.filter(p=>p.status==='Approved').length} pending approval`} color="bg-emerald-50 dark:bg-emerald-900/20" />
+        <StatCard icon={<FileCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />} label="Published" value={stats.published} sub={`${policies.filter(p=>p.status==='Approved').length} pending approval`} color="bg-emerald-50 dark:bg-emerald-900/20" />
         <StatCard icon={<RefreshCw className="w-5 h-5 text-amber-600 dark:text-amber-400" />} label="Under Review" value={stats.underReview} color="bg-amber-50 dark:bg-amber-900/20" />
         <StatCard icon={<AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />} label="Review Due Soon" value={stats.expiringSoon} sub={stats.overdue > 0 ? `${stats.overdue} overdue` : undefined} color="bg-red-50 dark:bg-red-900/20" />
       </div>
