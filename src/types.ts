@@ -63,14 +63,29 @@ export interface Vendor {
   lastAssessment: string;
 }
 
+export type TaskStatus = 'Backlog' | 'Todo' | 'In Progress' | 'In Review' | 'Done' | 'Cancelled';
+export type TaskPriority = 'Urgent' | 'High' | 'Medium' | 'Low' | 'None';
+export type TaskType = 'Remediation' | 'Evidence' | 'Audit' | 'Policy' | 'General';
+
+export interface TaskLinkedItem {
+  type: 'risk' | 'control' | 'finding' | 'policy';
+  id: string;
+  label: string;
+}
+
 export interface Task {
   id: string;
   title: string;
   description: string;
-  dueDate: string;
-  status: 'Todo' | 'In Progress' | 'Completed' | 'Blocked';
-  priority: 'Low' | 'Medium' | 'High';
+  status: TaskStatus;
+  priority: TaskPriority;
+  type: TaskType;
   assignee: string;
+  dueDate: string;
+  labels: string[];
+  linkedItems: TaskLinkedItem[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CalendarEvent {

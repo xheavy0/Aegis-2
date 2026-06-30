@@ -48,10 +48,14 @@ export let vendors: Vendor[] = [
 ];
 
 export let tasks: Task[] = [
-  { id: 'T-001', title: 'Update Firewall Rules', description: 'Review and update egress filtering rules for AWS VPCs.', dueDate: '2024-05-15', status: 'In Progress', priority: 'High', assignee: 'Alex C.' },
-  { id: 'T-002', title: 'User Access Review', description: 'Quarterly review of IAM permissions for core infrastructure.', dueDate: '2024-05-20', status: 'Todo', priority: 'Medium', assignee: 'Sarah L.' },
-  { id: 'T-003', title: 'SOC 2 Evidence Export', description: 'Export control evidence for Trust Services Criteria assessment.', dueDate: '2024-05-10', status: 'Completed', priority: 'High', assignee: 'Alex C.' },
-  { id: 'T-004', title: 'Third-party Risk Assessment', description: 'Complete due diligence for New Vendor Alpha.', dueDate: '2024-05-25', status: 'Todo', priority: 'Low', assignee: 'Unassigned' },
+  { id: 'T-001', title: 'Update Firewall Egress Rules', type: 'Remediation', description: 'Review and tighten outbound filtering rules for AWS VPCs. Focus on ports 80/443 egress and deny all others.', status: 'In Progress', priority: 'Urgent', assignee: 'Alex C.', dueDate: '2026-05-20', labels: ['AWS', 'Network'], linkedItems: [{ type: 'risk', id: 'R-012', label: 'Lateral Movement Risk' }, { type: 'control', id: 'PR.AC-05', label: 'Network Integrity' }], createdAt: '2026-05-01', updatedAt: '2026-05-10' },
+  { id: 'T-002', title: 'Quarterly IAM Access Review', type: 'Audit', description: 'Review and certify all IAM roles and permissions for production and staging environments.', status: 'Todo', priority: 'High', assignee: 'Sarah L.', dueDate: '2026-05-25', labels: ['IAM', 'SOC2'], linkedItems: [{ type: 'control', id: 'PR.AA-03', label: 'Authentication' }], createdAt: '2026-05-05', updatedAt: '2026-05-09' },
+  { id: 'T-003', title: 'SOC 2 Evidence Export', type: 'Evidence', description: 'Export and package all control evidence for the Trust Services Criteria assessment window Q2 2026.', status: 'Done', priority: 'High', assignee: 'Alex C.', dueDate: '2026-05-10', labels: ['SOC2', 'Audit'], linkedItems: [], createdAt: '2026-04-20', updatedAt: '2026-05-10' },
+  { id: 'T-004', title: 'Third-party Risk Assessment — Acme Corp', type: 'Remediation', description: 'Complete vendor security due diligence. Require SOC 2, pen test, and BCP from Acme Corp.', status: 'Backlog', priority: 'Medium', assignee: 'Unassigned', dueDate: '2026-06-01', labels: ['Vendor'], linkedItems: [{ type: 'risk', id: 'R-021', label: 'Third-party Risk' }], createdAt: '2026-05-07', updatedAt: '2026-05-07' },
+  { id: 'T-005', title: 'Update Information Security Policy', type: 'Policy', description: 'Revise IS policy to include NIST CSF 2.0 GOVERN function requirements and update board charter references.', status: 'In Review', priority: 'Medium', assignee: 'Elena R.', dueDate: '2026-05-30', labels: ['NIST', 'Policy'], linkedItems: [{ type: 'policy', id: 'P-001', label: 'IS Policy' }], createdAt: '2026-05-03', updatedAt: '2026-05-11' },
+  { id: 'T-006', title: 'MFA Enforcement — Legacy SAP', type: 'Remediation', description: 'Deploy SAML connector for SAP legacy ERP to enforce MFA via Okta. Test with 10 pilot users.', status: 'Todo', priority: 'Urgent', assignee: 'David M.', dueDate: '2026-05-22', labels: ['MFA', 'SAP'], linkedItems: [{ type: 'finding', id: 'F-034', label: 'MFA Gap Finding' }, { type: 'risk', id: 'R-007', label: 'MFA Bypass Risk' }], createdAt: '2026-05-08', updatedAt: '2026-05-10' },
+  { id: 'T-007', title: 'Penetration Test — Q2 2026', type: 'Audit', description: 'Coordinate external pen test with CrowdStrike Services. Scope: web app + internal network.', status: 'Backlog', priority: 'High', assignee: 'Archili K.', dueDate: '2026-06-15', labels: ['PenTest'], linkedItems: [], createdAt: '2026-05-10', updatedAt: '2026-05-10' },
+  { id: 'T-008', title: 'Data-at-Rest Encryption Gap', type: 'Remediation', description: 'Enable encryption for all S3 buckets and RDS instances not yet covered. Document exceptions.', status: 'Cancelled', priority: 'Low', assignee: 'David M.', dueDate: '2026-05-15', labels: ['Encryption', 'AWS'], linkedItems: [{ type: 'control', id: 'PR.DS-01', label: 'Data Protection' }], createdAt: '2026-04-15', updatedAt: '2026-05-08' },
 ];
 
 export let calendarEvents: CalendarEvent[] = [
@@ -63,7 +67,7 @@ export let calendarEvents: CalendarEvent[] = [
 
 export let notifications: AppNotification[] = [];
 
-let counters = { R: 112, F: 515, V: 2, T: 4, E: 4, N: 0 };
+let counters = { R: 112, F: 515, V: 2, T: 8, E: 4, N: 0 };
 
 export function nextId(prefix: 'R' | 'F' | 'V' | 'T' | 'E' | 'N'): string {
   counters[prefix]++;

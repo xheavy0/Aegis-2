@@ -15,18 +15,24 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 router.post('/', (req: Request, res: Response) => {
-  const { title, description, dueDate, status, priority, assignee } = req.body as Partial<Task>;
-  if (!title || !description || !dueDate || !status || !priority || !assignee) {
-    return res.status(400).json({ error: 'Missing required fields: title, description, dueDate, status, priority, assignee' });
+  const body = req.body as Partial<Task>;
+  if (!body.title || !body.status || !body.priority || !body.assignee) {
+    return res.status(400).json({ error: 'Missing required fields: title, status, priority, assignee' });
   }
+  const today = new Date().toISOString().split('T')[0];
   const newTask: Task = {
     id: nextId('T'),
-    title,
-    description,
-    dueDate,
-    status,
-    priority,
-    assignee,
+    title: body.title,
+    description: body.description ?? '',
+    status: body.status,
+    priority: body.priority,
+    type: body.type ?? 'General',
+    assignee: body.assignee,
+    dueDate: body.dueDate ?? today,
+    labels: body.labels ?? [],
+    linkedItems: body.linkedItems ?? [],
+    createdAt: body.createdAt ?? today,
+    updatedAt: today,
   };
   tasks.push(newTask);
   res.status(201).json(newTask);
