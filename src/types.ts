@@ -267,3 +267,46 @@ export interface EvidenceItem {
   tags: string[];
   description: string;
 }
+
+export type AuditStatus = 'Planning' | 'Fieldwork' | 'Review' | 'Finalized' | 'Archived';
+export type AuditType = 'Internal' | 'External' | 'SOC 2' | 'ISO 27001' | 'Vendor';
+export type AuditEvidenceStatus = 'Requested' | 'Uploaded' | 'Accepted' | 'Rejected';
+export type AuditFindingType = 'Strength' | 'Gap' | 'Observation';
+
+export interface AuditEvidenceItem {
+  id: string;
+  name: string;
+  category: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  status: AuditEvidenceStatus;
+  size: string;
+}
+
+export interface AuditFinding {
+  id: string;
+  type: AuditFindingType;
+  title: string;
+  detail: string;
+  severity: 'Low' | 'Medium' | 'High';
+  owner: string;
+  createdAt: string;
+}
+
+export interface AuditProgram {
+  id: string;
+  title: string;
+  type: AuditType;
+  status: AuditStatus;
+  auditor: string;
+  owner: string;
+  startDate: string;
+  dueDate: string;
+  score: number;
+  scope: string[];
+  evidence: AuditEvidenceItem[];
+  findings: AuditFinding[];
+  finalAssessment: string;
+  nextRecommendations: string;
+  archivedAt?: string;
+}
