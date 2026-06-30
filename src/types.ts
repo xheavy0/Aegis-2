@@ -230,3 +230,40 @@ export interface Control {
   linkedPolicies: string[];
   notes: string;
 }
+
+export type EvidenceType =
+  | 'Policy Document' | 'Screenshot' | 'Config Export' | 'Audit Log'
+  | 'Scan Report' | 'Certificate' | 'Test Result' | 'Training Record'
+  | 'Access Review' | 'API Response';
+export type EvidenceStatus = 'Valid' | 'Expiring Soon' | 'Expired' | 'Needs Review';
+export type EvidenceSourceType = 'manual' | 'integration' | 'api';
+
+export interface EvidenceGap {
+  control: string;
+  description: string;
+  severity: 'Critical' | 'High' | 'Medium';
+}
+
+export interface EvidenceWarning {
+  message: string;
+  type: 'expiry' | 'coverage' | 'quality' | 'stale';
+}
+
+export interface EvidenceItem {
+  id: string;
+  name: string;
+  type: EvidenceType;
+  source: EvidenceSourceType;
+  integration?: string;
+  framework: string;
+  controls: string[];
+  status: EvidenceStatus;
+  collectedAt: string;
+  expiresAt: string | null;
+  size?: string;
+  owner: string;
+  gaps: EvidenceGap[];
+  warnings: EvidenceWarning[];
+  tags: string[];
+  description: string;
+}

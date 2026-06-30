@@ -1,4 +1,4 @@
-import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess, Control } from '../types';
+import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess, Control, EvidenceItem } from '../types';
 
 const BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000') + '/api';
 
@@ -81,6 +81,13 @@ export const api = {
   createControl: (body: Control) => req<Control>('POST', '/controls', body),
   updateControl: (id: string, body: Partial<Control>) => req<Control>('PUT', `/controls/${id}`, body),
   deleteControl: (id: string) => req<void>('DELETE', `/controls/${id}`),
+
+  // Evidence
+  getEvidence: () => req<EvidenceItem[]>('GET', '/evidence'),
+  getEvidenceItem: (id: string) => req<EvidenceItem>('GET', `/evidence/${id}`),
+  createEvidence: (body: Omit<EvidenceItem, 'id'>) => req<EvidenceItem>('POST', '/evidence', body),
+  updateEvidence: (id: string, body: Partial<EvidenceItem>) => req<EvidenceItem>('PUT', `/evidence/${id}`, body),
+  deleteEvidence: (id: string) => req<void>('DELETE', `/evidence/${id}`),
 
   // Notifications
   getNotifications: (audience?: string) =>
