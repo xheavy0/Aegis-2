@@ -29,7 +29,7 @@ export const api = {
   // Findings
   getFindings: () => req<Finding[]>('GET', '/findings'),
   getFinding: (id: string) => req<Finding>('GET', `/findings/${id}`),
-  createFinding: (body: Omit<Finding, 'id' | 'dateFound'>) => req<Finding>('POST', '/findings', body),
+  createFinding: (body: Omit<Finding, 'id'>) => req<Finding>('POST', '/findings', body),
   updateFinding: (id: string, body: Partial<Finding>) => req<Finding>('PUT', `/findings/${id}`, body),
   deleteFinding: (id: string) => req<void>('DELETE', `/findings/${id}`),
 

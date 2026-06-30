@@ -15,17 +15,27 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 router.post('/', (req: Request, res: Response) => {
-  const { description, severity, source, status } = req.body as Partial<Finding>;
-  if (!description || !severity || !source || !status) {
-    return res.status(400).json({ error: 'Missing required fields: description, severity, source, status' });
+  const body = req.body as Partial<Finding>;
+  if (!body.title || !body.severity || !body.category || !body.source || !body.status) {
+    return res.status(400).json({ error: 'Missing required fields: title, severity, category, source, status' });
   }
+  const today = new Date().toISOString().split('T')[0];
   const newFinding: Finding = {
     id: nextId('F'),
-    description,
-    severity,
-    source,
-    status,
-    dateFound: new Date().toISOString().split('T')[0],
+    title: body.title,
+    description: body.description ?? '',
+    severity: body.severity,
+    category: body.category,
+    source: body.source,
+    status: body.status,
+    owner: body.owner ?? 'Unassigned',
+    dateFound: body.dateFound ?? today,
+    dueDate: body.dueDate ?? today,
+    slaBreached: body.slaBreached ?? false,
+    daysOpen: body.daysOpen ?? 0,
+    affectedAsset: body.affectedAsset ?? '',
+    evidenceCount: body.evidenceCount ?? 0,
+    remediationNotes: body.remediationNotes ?? '',
   };
   findings.push(newFinding);
   res.status(201).json(newFinding);

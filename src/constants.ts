@@ -1,4 +1,4 @@
-import { NISTStatus, Finding, Vendor, Task, CalendarEvent } from './types';
+import { NISTStatus, Vendor, Task, CalendarEvent } from './types';
 
 export const NIST_CSF_FUNCTIONS = [
   { id: 'GOVERN', label: 'Govern', color: '#6366F1', description: 'Establish the organizations mission, stakeholder expectations, and legal requirements.' },
@@ -16,12 +16,6 @@ export const MOCK_NIST_STATUS: NISTStatus[] = [
   { function: 'DETECT', score: 58, totalControls: 18, implementedControls: 10 },
   { function: 'RESPOND', score: 92, totalControls: 21, implementedControls: 19 },
   { function: 'RECOVER', score: 78, totalControls: 12, implementedControls: 9 },
-];
-
-export const MOCK_FINDINGS: Finding[] = [
-  { id: 'F-501', description: 'Inactive accounts not disabled for 90+ days', severity: 'High', source: 'Active Directory', status: 'Open', dateFound: '2024-03-18' },
-  { id: 'F-502', description: 'Critical vulnerability on public database server', severity: 'Critical', source: 'Tenable', status: 'Open', dateFound: '2024-03-19' },
-  { id: 'F-503', description: 'Unauthorized API token creation detected', severity: 'Medium', source: 'Okta', status: 'Resolved', dateFound: '2024-03-10' },
 ];
 
 export const MOCK_VENDORS: Vendor[] = [
