@@ -3,24 +3,8 @@ import { Server, Cloud, Network, Cpu, HardDrive, MemoryStick, Activity, Plus, Se
 import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { ResponsiveContainer, AreaChart, Area, Tooltip, LineChart, Line } from 'recharts';
-
-type AssetType = 'Server' | 'Cloud' | 'Network';
-type AssetStatus = 'Online' | 'Offline' | 'Degraded';
-type AssetEnv = 'On-Prem' | 'Cloud' | 'Hybrid';
-
-interface Asset {
-  id: string;
-  name: string;
-  type: AssetType;
-  env: AssetEnv;
-  status: AssetStatus;
-  ip: string;
-  os: string;
-  owner: string;
-  location: string;
-  lastSeen: string;
-  tags: string[];
-}
+import { Asset, AssetType, AssetStatus, AssetEnv } from '@/src/types';
+import { api } from '@/src/lib/api';
 
 interface LiveMetric {
   cpu: number;
@@ -30,23 +14,6 @@ interface LiveMetric {
   history: { t: number; cpu: number; ram: number }[];
 }
 
-const ASSETS: Asset[] = [
-  { id: 'A-001', name: 'prod-web-01',       type: 'Server',  env: 'On-Prem', status: 'Online',   ip: '10.0.1.10',   os: 'Ubuntu 22.04',   owner: 'Alex C.',   location: 'DC1 / Rack 3A', lastSeen: 'Live', tags: ['prod', 'web'] },
-  { id: 'A-002', name: 'prod-web-02',       type: 'Server',  env: 'On-Prem', status: 'Online',   ip: '10.0.1.11',   os: 'Ubuntu 22.04',   owner: 'Alex C.',   location: 'DC1 / Rack 3B', lastSeen: 'Live', tags: ['prod', 'web'] },
-  { id: 'A-003', name: 'prod-db-primary',   type: 'Server',  env: 'On-Prem', status: 'Online',   ip: '10.0.2.10',   os: 'RHEL 9.2',       owner: 'David M.',  location: 'DC1 / Rack 5A', lastSeen: 'Live', tags: ['prod', 'db', 'critical'] },
-  { id: 'A-004', name: 'prod-db-replica',   type: 'Server',  env: 'On-Prem', status: 'Degraded', ip: '10.0.2.11',   os: 'RHEL 9.2',       owner: 'David M.',  location: 'DC1 / Rack 5B', lastSeen: '2m ago', tags: ['prod', 'db'] },
-  { id: 'A-005', name: 'dev-build-01',      type: 'Server',  env: 'On-Prem', status: 'Online',   ip: '10.0.3.10',   os: 'Debian 12',      owner: 'Sarah L.',  location: 'DC2 / Rack 1A', lastSeen: 'Live', tags: ['dev', 'build'] },
-  { id: 'A-006', name: 'aws-ec2-api-prod',  type: 'Cloud',   env: 'Cloud',   status: 'Online',   ip: '172.31.10.5', os: 'Amazon Linux 2', owner: 'Alex C.',   location: 'AWS / us-east-1', lastSeen: 'Live', tags: ['prod', 'api', 'aws'] },
-  { id: 'A-007', name: 'aws-ec2-api-stg',   type: 'Cloud',   env: 'Cloud',   status: 'Online',   ip: '172.31.10.6', os: 'Amazon Linux 2', owner: 'Sarah L.',  location: 'AWS / us-east-1', lastSeen: 'Live', tags: ['staging', 'api', 'aws'] },
-  { id: 'A-008', name: 'aws-rds-prod',      type: 'Cloud',   env: 'Cloud',   status: 'Online',   ip: '172.31.20.5', os: 'AWS RDS / PG 15', owner: 'David M.', location: 'AWS / us-east-1', lastSeen: 'Live', tags: ['prod', 'db', 'aws', 'critical'] },
-  { id: 'A-009', name: 'gcp-gke-cluster',   type: 'Cloud',   env: 'Cloud',   status: 'Online',   ip: '10.128.0.10', os: 'GKE / k8s 1.29', owner: 'Elena R.',  location: 'GCP / us-central1', lastSeen: 'Live', tags: ['prod', 'k8s', 'gcp'] },
-  { id: 'A-010', name: 'azure-vm-backup',   type: 'Cloud',   env: 'Cloud',   status: 'Offline',  ip: '10.0.0.4',    os: 'Windows Server 2022', owner: 'Sarah L.', location: 'Azure / eastus', lastSeen: '1h ago', tags: ['backup', 'azure'] },
-  { id: 'A-011', name: 'core-sw-01',        type: 'Network', env: 'On-Prem', status: 'Online',   ip: '10.0.0.1',    os: 'Cisco IOS 17.6', owner: 'David M.',  location: 'DC1 / MDF',     lastSeen: 'Live', tags: ['network', 'core'] },
-  { id: 'A-012', name: 'core-sw-02',        type: 'Network', env: 'On-Prem', status: 'Online',   ip: '10.0.0.2',    os: 'Cisco IOS 17.6', owner: 'David M.',  location: 'DC1 / MDF',     lastSeen: 'Live', tags: ['network', 'core'] },
-  { id: 'A-013', name: 'fw-edge-01',        type: 'Network', env: 'On-Prem', status: 'Online',   ip: '203.0.113.1', os: 'Palo Alto PAN-OS 11', owner: 'Alex C.', location: 'DC1 / Edge',   lastSeen: 'Live', tags: ['network', 'firewall', 'critical'] },
-  { id: 'A-014', name: 'access-sw-floor2',  type: 'Network', env: 'On-Prem', status: 'Degraded', ip: '10.0.1.254',  os: 'Juniper JunOS 22', owner: 'David M.', location: 'Office / Floor 2', lastSeen: '5m ago', tags: ['network', 'access'] },
-  { id: 'A-015', name: 'vpn-concentrator',  type: 'Network', env: 'Hybrid',  status: 'Online',   ip: '10.0.0.10',   os: 'Cisco ASA 9.18', owner: 'Alex C.',   location: 'DC1 / Edge',    lastSeen: 'Live', tags: ['network', 'vpn'] },
-];
 
 // Core servers we'll show live metrics for
 const MONITORED = ['prod-web-01', 'prod-db-primary', 'aws-ec2-api-prod', 'gcp-gke-cluster'];
@@ -131,6 +98,18 @@ export function AssetManagementView() {
   const [filterStatus, setFilterStatus] = useState<'All' | AssetStatus>('All');
   const [metrics, setMetrics] = useState<Record<string, LiveMetric>>(INITIAL_METRICS);
   const [tick, setTick] = useState(0);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    api.getAssets()
+      .then(data => { if (active) { setAssets(data); setError(null); } })
+      .catch(err => { if (active) setError(err.message ?? 'Failed to load assets'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   // Simulate real-time updates every 2 seconds
   useEffect(() => {
@@ -152,7 +131,7 @@ export function AssetManagementView() {
     return () => clearInterval(id);
   }, [tab]);
 
-  const filtered = ASSETS.filter(a => {
+  const filtered = assets.filter(a => {
     const matchType   = filterType === 'All'   || a.type === filterType;
     const matchEnv    = filterEnv === 'All'    || a.env === filterEnv;
     const matchStatus = filterStatus === 'All' || a.status === filterStatus;
@@ -160,9 +139,9 @@ export function AssetManagementView() {
     return matchType && matchEnv && matchStatus && matchSearch;
   });
 
-  const online   = ASSETS.filter(a => a.status === 'Online').length;
-  const degraded = ASSETS.filter(a => a.status === 'Degraded').length;
-  const offline  = ASSETS.filter(a => a.status === 'Offline').length;
+  const online   = assets.filter(a => a.status === 'Online').length;
+  const degraded = assets.filter(a => a.status === 'Degraded').length;
+  const offline  = assets.filter(a => a.status === 'Offline').length;
 
   return (
     <div className="space-y-6 pb-10">
@@ -177,13 +156,24 @@ export function AssetManagementView() {
         </button>
       </div>
 
+      {loading && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <RefreshCw className="w-4 h-4 animate-spin" /> Loading assets…
+        </div>
+      )}
+      {error && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      )}
+
       {/* Summary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Total Assets',   value: ASSETS.length,                                            color: 'text-slate-900 dark:text-white' },
-          { label: 'Servers',        value: ASSETS.filter(a => a.type === 'Server').length,            color: 'text-blue-500' },
-          { label: 'Cloud',          value: ASSETS.filter(a => a.type === 'Cloud').length,             color: 'text-purple-500' },
-          { label: 'Network',        value: ASSETS.filter(a => a.type === 'Network').length,           color: 'text-teal-500' },
+          { label: 'Total Assets',   value: assets.length,                                            color: 'text-slate-900 dark:text-white' },
+          { label: 'Servers',        value: assets.filter(a => a.type === 'Server').length,            color: 'text-blue-500' },
+          { label: 'Cloud',          value: assets.filter(a => a.type === 'Cloud').length,             color: 'text-purple-500' },
+          { label: 'Network',        value: assets.filter(a => a.type === 'Network').length,           color: 'text-teal-500' },
           { label: 'Online',         value: online,                                                    color: 'text-emerald-500' },
           { label: 'Degraded / Off', value: `${degraded} / ${offline}`,                               color: 'text-amber-500' },
         ].map(s => (
@@ -312,7 +302,7 @@ export function AssetManagementView() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {MONITORED.map(name => {
-                const asset = ASSETS.find(a => a.name === name)!;
+                const asset = assets.find(a => a.name === name)!;
                 const m = metrics[name];
                 const sc = STATUS_CFG[asset.status];
                 return (

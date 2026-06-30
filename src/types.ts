@@ -164,3 +164,21 @@ export interface Policy {
   attestations: PolicyAttestation[];
   exceptions: number;
 }
+
+export type AssetType = 'Server' | 'Cloud' | 'Network';
+export type AssetStatus = 'Online' | 'Offline' | 'Degraded';
+export type AssetEnv = 'On-Prem' | 'Cloud' | 'Hybrid';
+
+export interface Asset {
+  id: string;
+  name: string;
+  type: AssetType;
+  env: AssetEnv;
+  status: AssetStatus;
+  ip: string;
+  os: string;
+  owner: string;
+  location: string;
+  lastSeen: string;
+  tags: string[];
+}
