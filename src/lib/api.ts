@@ -44,6 +44,10 @@ export const api = {
   login: (email: string, password: string) => req<LoginResponse>('POST', '/auth/login', { email, password }),
   me: () => req<AuthUser>('GET', '/auth/me'),
 
+  // AI assistant (Gemini-backed)
+  aiChat: (messages: { role: 'user' | 'assistant'; text: string }[], skills: string[]) =>
+    req<{ text: string; configured: boolean }>('POST', '/ai/chat', { messages, skills }),
+
   // NIST
   getNist: () => req<NISTStatus[]>('GET', '/nist'),
   updateNist: (fn: string, body: Partial<NISTStatus>) => req<NISTStatus>('PUT', `/nist/${fn}`, body),

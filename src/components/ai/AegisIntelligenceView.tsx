@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import type { CurrentUser } from '@/src/rbac';
+import { api } from '@/src/lib/api';
 
 type ChatRole = 'user' | 'assistant';
 type WorkspaceTab = 'chat' | 'skills';
@@ -146,6 +147,7 @@ export function AegisIntelligenceView({ currentUser }: { currentUser: CurrentUse
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
   const [editingSkillName, setEditingSkillName] = useState('');
   const [editingSkillDescription, setEditingSkillDescription] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -212,36 +214,46 @@ export function AegisIntelligenceView({ currentUser }: { currentUser: CurrentUse
     });
   }
 
-  function sendMessage(messageText = input) {
+  function setAssistantText(threadId: string, messageId: string, text: string) {
+    setThreads(current => current.map(thread => {
+      if (thread.id !== threadId) return thread;
+      return { ...thread, messages: thread.messages.map(m => (m.id === messageId ? { ...m, text } : m)) };
+    }));
+  }
+
+  async function sendMessage(messageText = input) {
     const clean = messageText.trim();
-    if (!clean || !activeThread) return;
+    if (!clean || !activeThread || isSending) return;
 
     const now = Date.now();
-    const skillContext = activeSkills.map(skill => skill.name).join(', ') || 'Default GRC context';
-    const userMessage: ChatMessage = {
-      id: makeId('user'),
-      role: 'user',
-      text: clean,
-      createdAt: now,
-    };
-    const assistantMessage: ChatMessage = {
-      id: makeId('assistant'),
-      role: 'assistant',
-      text: `Got it. In Aegis GRC mode, I will review related risks, controls, audit history, and evidence. Active skills: ${skillContext}.`,
-      createdAt: now + 1,
-    };
+    const threadId = activeThread.id;
+    const skillNames = activeSkills.map(skill => skill.name);
+    const userMessage: ChatMessage = { id: makeId('user'), role: 'user', text: clean, createdAt: now };
+    const pendingId = makeId('assistant');
+    const pending: ChatMessage = { id: pendingId, role: 'assistant', text: '…', createdAt: now + 1 };
+
+    const history = [...activeThread.messages, userMessage].map(m => ({ role: m.role, text: m.text }));
 
     setThreads(current => current.map(thread => {
-      if (thread.id !== activeThread.id) return thread;
-
+      if (thread.id !== threadId) return thread;
       return {
         ...thread,
         title: thread.messages.length === 0 ? titleFromPrompt(clean) : thread.title,
         updatedAt: now,
-        messages: [...thread.messages, userMessage, assistantMessage],
+        messages: [...thread.messages, userMessage, pending],
       };
     }));
     setInput('');
+    setIsSending(true);
+
+    try {
+      const { text } = await api.aiChat(history, skillNames);
+      setAssistantText(threadId, pendingId, text);
+    } catch (err) {
+      setAssistantText(threadId, pendingId, `⚠️ ${err instanceof Error ? err.message : 'AI request failed'}`);
+    } finally {
+      setIsSending(false);
+    }
   }
 
   function addSkill() {
@@ -682,11 +694,11 @@ export function AegisIntelligenceView({ currentUser }: { currentUser: CurrentUse
                   </div>
                   <button
                     onClick={() => sendMessage()}
-                    disabled={!input.trim()}
+                    disabled={!input.trim() || isSending}
                     className="flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
                   >
                     <Send className="h-4 w-4" />
-                    Send
+                    {isSending ? 'Thinking…' : 'Send'}
                   </button>
                 </div>
               </div>
