@@ -1,4 +1,4 @@
-import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset } from '../types';
+import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess } from '../types';
 
 const BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000') + '/api';
 
@@ -67,6 +67,13 @@ export const api = {
   createAsset: (body: Omit<Asset, 'id'>) => req<Asset>('POST', '/assets', body),
   updateAsset: (id: string, body: Partial<Asset>) => req<Asset>('PUT', `/assets/${id}`, body),
   deleteAsset: (id: string) => req<void>('DELETE', `/assets/${id}`),
+
+  // BIA
+  getBIA: () => req<BIAProcess[]>('GET', '/bia'),
+  getBIAProcess: (id: string) => req<BIAProcess>('GET', `/bia/${id}`),
+  createBIAProcess: (body: Omit<BIAProcess, 'id'>) => req<BIAProcess>('POST', '/bia', body),
+  updateBIAProcess: (id: string, body: Partial<BIAProcess>) => req<BIAProcess>('PUT', `/bia/${id}`, body),
+  deleteBIAProcess: (id: string) => req<void>('DELETE', `/bia/${id}`),
 
   // Notifications
   getNotifications: (audience?: string) =>

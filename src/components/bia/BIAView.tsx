@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TrendingUp, Clock, DollarSign, Users, AlertTriangle, ChevronDown, ChevronRight,
   Plus, Shield, Activity, Server, Globe, Building2, CheckCircle2, Circle,
@@ -7,90 +7,15 @@ import {
 import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { BIAProcess, BIACriticality, BIAImpactLevel } from '@/src/types';
+import { api } from '@/src/lib/api';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
-type Criticality = 'Critical' | 'High' | 'Medium' | 'Low';
-type ImpactLevel = 'Catastrophic' | 'Major' | 'Moderate' | 'Minor' | 'Negligible';
+type Criticality = BIACriticality;
+type ImpactLevel = BIAImpactLevel;
 type PlanStatus  = 'Complete' | 'In Progress' | 'Not Started';
 
-interface BIAProcess {
-  id: string;
-  name: string;
-  department: string;
-  owner: string;
-  criticality: Criticality;
-  rtoHours: number;
-  rpoHours: number;
-  mtpdHours: number;
-  currentRTOHours: number; // actual current recovery capability
-  financialImpact: ImpactLevel;
-  operationalImpact: ImpactLevel;
-  reputationalImpact: ImpactLevel;
-  regulatoryImpact: ImpactLevel;
-  dependencies: string[];
-  description: string;
-  hourlyLoss: number;
-}
-
-const PROCESSES: BIAProcess[] = [
-  {
-    id: 'BIA-001', name: 'Core Banking & Payment Processing', department: 'Finance', owner: 'Alex C.',
-    criticality: 'Critical', rtoHours: 0.25, rpoHours: 0, mtpdHours: 4, currentRTOHours: 1.5,
-    financialImpact: 'Catastrophic', operationalImpact: 'Catastrophic', reputationalImpact: 'Major', regulatoryImpact: 'Major',
-    dependencies: ['prod-db-primary', 'aws-ec2-api-prod', 'fw-edge-01'],
-    description: 'Real-time payment processing and core banking transactions. Any downtime directly halts revenue.',
-    hourlyLoss: 55000,
-  },
-  {
-    id: 'BIA-002', name: 'Customer Identity & Access (IAM)', department: 'Security', owner: 'Alex C.',
-    criticality: 'Critical', rtoHours: 0.5, rpoHours: 0.08, mtpdHours: 8, currentRTOHours: 0.75,
-    financialImpact: 'Major', operationalImpact: 'Catastrophic', reputationalImpact: 'Catastrophic', regulatoryImpact: 'Catastrophic',
-    dependencies: ['prod-web-01', 'prod-web-02', 'vpn-concentrator'],
-    description: 'Authentication and authorization for all customer-facing systems. Outage locks all users out.',
-    hourlyLoss: 28000,
-  },
-  {
-    id: 'BIA-003', name: 'Regulatory Reporting & Compliance', department: 'Compliance', owner: 'Alex C.',
-    criticality: 'High', rtoHours: 24, rpoHours: 4, mtpdHours: 72, currentRTOHours: 24,
-    financialImpact: 'Major', operationalImpact: 'Moderate', reputationalImpact: 'Catastrophic', regulatoryImpact: 'Catastrophic',
-    dependencies: ['prod-db-primary', 'aws-rds-prod'],
-    description: 'Regulatory filings and compliance reporting. Missed deadlines trigger significant fines.',
-    hourlyLoss: 18000,
-  },
-  {
-    id: 'BIA-004', name: 'HR & Payroll Systems', department: 'Human Resources', owner: 'Sarah L.',
-    criticality: 'High', rtoHours: 8, rpoHours: 24, mtpdHours: 48, currentRTOHours: 12,
-    financialImpact: 'Major', operationalImpact: 'Moderate', reputationalImpact: 'Major', regulatoryImpact: 'Major',
-    dependencies: ['prod-db-replica', 'azure-vm-backup'],
-    description: 'Payroll processing and employee records. Legal implications if payroll is missed.',
-    hourlyLoss: 12000,
-  },
-  {
-    id: 'BIA-005', name: 'Customer Support Platform', department: 'Operations', owner: 'David M.',
-    criticality: 'High', rtoHours: 2, rpoHours: 0.5, mtpdHours: 12, currentRTOHours: 3,
-    financialImpact: 'Moderate', operationalImpact: 'Major', reputationalImpact: 'Major', regulatoryImpact: 'Minor',
-    dependencies: ['aws-ec2-api-stg', 'core-sw-01'],
-    description: 'Ticketing, live chat, and phone support. Prolonged outage causes customer churn.',
-    hourlyLoss: 6500,
-  },
-  {
-    id: 'BIA-006', name: 'Data Warehouse & Analytics', department: 'Data', owner: 'Elena R.',
-    criticality: 'High', rtoHours: 4, rpoHours: 1, mtpdHours: 24, currentRTOHours: 4,
-    financialImpact: 'Moderate', operationalImpact: 'Major', reputationalImpact: 'Minor', regulatoryImpact: 'Minor',
-    dependencies: ['aws-rds-prod', 'gcp-gke-cluster'],
-    description: 'Business intelligence, reporting, and executive dashboards.',
-    hourlyLoss: 9000,
-  },
-  {
-    id: 'BIA-007', name: 'Internal Collaboration & Email', department: 'IT', owner: 'David M.',
-    criticality: 'Medium', rtoHours: 4, rpoHours: 1, mtpdHours: 72, currentRTOHours: 4,
-    financialImpact: 'Minor', operationalImpact: 'Moderate', reputationalImpact: 'Minor', regulatoryImpact: 'Negligible',
-    dependencies: ['core-sw-02', 'access-sw-floor2'],
-    description: 'Email, messaging, and document collaboration tools.',
-    hourlyLoss: 3200,
-  },
-];
 
 const RECOVERY_PHASES = [
   { id: 'P1', phase: 'Detection & Escalation',   duration: '0–15 min',  status: 'Complete' as PlanStatus,     owner: 'Alex C.',  tasks: ['Incident detected via monitoring', 'On-call engineer paged', 'Incident bridge opened', 'Severity level declared'] },
@@ -170,14 +95,26 @@ export function BIAView() {
   const [tab, setTab]         = useState<Tab>('overview');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filterCrit, setFilterCrit] = useState<'All' | Criticality>('All');
+  const [processes, setProcesses] = useState<BIAProcess[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const metRTO    = PROCESSES.filter(p => p.currentRTOHours <= p.rtoHours).length;
-  const unmetRTO  = PROCESSES.length - metRTO;
-  const readiness = Math.round((metRTO / PROCESSES.length) * 100);
-  const totalLoss = PROCESSES.reduce((s, p) => s + p.hourlyLoss, 0);
-  const critical  = PROCESSES.filter(p => p.criticality === 'Critical').length;
+  useEffect(() => {
+    let active = true;
+    api.getBIA()
+      .then(data => { if (active) { setProcesses(data); setError(null); } })
+      .catch(err => { if (active) setError(err.message ?? 'Failed to load BIA processes'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
-  const filtered = PROCESSES.filter(p => filterCrit === 'All' || p.criticality === filterCrit);
+  const metRTO    = processes.filter(p => p.currentRTOHours <= p.rtoHours).length;
+  const unmetRTO  = processes.length - metRTO;
+  const readiness = Math.round((metRTO / Math.max(processes.length, 1)) * 100);
+  const totalLoss = processes.reduce((s, p) => s + p.hourlyLoss, 0);
+  const critical  = processes.filter(p => p.criticality === 'Critical').length;
+
+  const filtered = processes.filter(p => filterCrit === 'All' || p.criticality === filterCrit);
 
   const TABS = [
     { id: 'overview',      label: 'Overview',        icon: <BarChart2 className="w-3.5 h-3.5" /> },
@@ -199,10 +136,21 @@ export function BIAView() {
         </button>
       </div>
 
+      {loading && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <Clock className="w-4 h-4 animate-spin" /> Loading BIA processes…
+        </div>
+      )}
+      {error && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      )}
+
       {/* KPI Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { label: 'Total Processes',    value: PROCESSES.length,                     color: 'text-slate-900 dark:text-white' },
+          { label: 'Total Processes',    value: processes.length,                     color: 'text-slate-900 dark:text-white' },
           { label: 'Critical',           value: critical,                              color: 'text-red-500' },
           { label: 'Recovery Readiness', value: `${readiness}%`,                      color: readiness >= 80 ? 'text-emerald-500' : readiness >= 60 ? 'text-amber-500' : 'text-red-500' },
           { label: 'Unmet RTO Targets',  value: unmetRTO,                             color: unmetRTO > 0 ? 'text-red-500' : 'text-emerald-500' },
@@ -240,7 +188,7 @@ export function BIAView() {
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Blue line = target · Bar = current recovery time</p>
                 </div>
                 <div className="space-y-4">
-                  {PROCESSES.map(p => (
+                  {processes.map(p => (
                     <div key={p.id} className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', CRIT_DOT[p.criticality])} />
@@ -272,7 +220,7 @@ export function BIAView() {
                       </tr>
                     </thead>
                     <tbody className="space-y-1">
-                      {PROCESSES.map(p => (
+                      {processes.map(p => (
                         <tr key={p.id} className="border-t border-slate-100 dark:border-aegis-border">
                           <td className="pr-3 py-2">
                             <div className="flex items-center gap-1.5">
@@ -315,8 +263,8 @@ export function BIAView() {
                     style={{ background: 'transparent' }}
                     data={[1,2,4,8,12,24,48].map(h => ({
                       label: h < 24 ? `${h}h` : `${h/24}d`,
-                      worst:     Math.round(PROCESSES.reduce((s,p) => s + p.hourlyLoss * h, 0) / 1000),
-                      mitigated: Math.round(PROCESSES.reduce((s,p) => s + (h > p.rtoHours ? p.hourlyLoss * p.rtoHours : p.hourlyLoss * h), 0) / 1000),
+                      worst:     Math.round(processes.reduce((s,p) => s + p.hourlyLoss * h, 0) / 1000),
+                      mitigated: Math.round(processes.reduce((s,p) => s + (h > p.rtoHours ? p.hourlyLoss * p.rtoHours : p.hourlyLoss * h), 0) / 1000),
                     }))}
                     margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
                   >
@@ -348,7 +296,7 @@ export function BIAView() {
           </motion.div>
         )}
 
-        {/* ── PROCESSES ──────────────────────────────────────────── */}
+        {/* ── processes ──────────────────────────────────────────── */}
         {tab === 'processes' && (
           <motion.div key="processes" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -469,7 +417,7 @@ export function BIAView() {
               </div>
               <div className="overflow-x-auto">
                 {(() => {
-                  const allSystems = Array.from(new Set(PROCESSES.flatMap(p => p.dependencies)));
+                  const allSystems = Array.from(new Set(processes.flatMap(p => p.dependencies)));
                   return (
                     <table className="w-full text-xs">
                       <thead>
@@ -483,7 +431,7 @@ export function BIAView() {
                         </tr>
                       </thead>
                       <tbody>
-                        {PROCESSES.map(p => (
+                        {processes.map(p => (
                           <tr key={p.id} className="border-t border-slate-100 dark:border-aegis-border">
                             <td className="py-2 pr-4">
                               <div className="flex items-center gap-2">
@@ -513,11 +461,11 @@ export function BIAView() {
               <h3 className="text-base font-black text-slate-900 dark:text-white">Single Points of Failure</h3>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Systems with the most dependent critical processes</p>
               <div className="space-y-3">
-                {Array.from(new Set(PROCESSES.flatMap(p => p.dependencies)))
+                {Array.from(new Set(processes.flatMap(p => p.dependencies)))
                   .map(sys => ({
                     sys,
-                    count: PROCESSES.filter(p => p.dependencies.includes(sys)).length,
-                    hasCritical: PROCESSES.some(p => p.dependencies.includes(sys) && p.criticality === 'Critical'),
+                    count: processes.filter(p => p.dependencies.includes(sys)).length,
+                    hasCritical: processes.some(p => p.dependencies.includes(sys) && p.criticality === 'Critical'),
                   }))
                   .sort((a, b) => b.count - a.count)
                   .map(({ sys, count, hasCritical }) => (
@@ -530,7 +478,7 @@ export function BIAView() {
                         <span className="text-[10px] font-black text-slate-500">{count} processes</span>
                       </div>
                       <div className="w-full h-2 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${(count / PROCESSES.length) * 100}%` }} transition={{ duration: 0.7 }}
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${(count / processes.length) * 100}%` }} transition={{ duration: 0.7 }}
                           className={cn('h-full rounded-full', hasCritical ? 'bg-red-500' : 'bg-blue-500')} />
                       </div>
                     </div>
