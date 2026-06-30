@@ -29,9 +29,14 @@ import {
   Users,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
+import { api } from '@/src/lib/api';
+import {
+  Note, NoteFolder, NoteShareEntry, NoteAccessLevel, NotePermission,
+} from '@/src/types';
 
-type AccessLevel = 'Private' | 'Team' | 'Shared';
-type Permission = 'Can view' | 'Can comment' | 'Can edit';
+type AccessLevel = NoteAccessLevel;
+type Permission = NotePermission;
+type ShareEntry = NoteShareEntry;
 
 interface TeamMember {
   id: string;
@@ -40,35 +45,6 @@ interface TeamMember {
   initials: string;
   color: string;
 }
-
-interface ShareEntry {
-  memberId: string;
-  permission: Permission;
-}
-
-interface NoteFolder {
-  id: string;
-  name: string;
-  color: string;
-  collapsed: boolean;
-}
-
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  folderId: string | null;
-  tags: string[];
-  pinned: boolean;
-  access: AccessLevel;
-  ownerId: string;
-  sharedWith: ShareEntry[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-const NOTES_STORAGE_KEY = 'aegis.notes.workspace.v2';
-const FOLDERS_STORAGE_KEY = 'aegis.noteFolders.workspace.v2';
 
 const TEAM_MEMBERS: TeamMember[] = [
   { id: 'alex', name: 'Alex C.', role: 'GRC Lead', initials: 'AC', color: '#2563eb' },
@@ -80,93 +56,6 @@ const TEAM_MEMBERS: TeamMember[] = [
 
 const FOLDER_COLORS = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#64748b'];
 
-const DEFAULT_FOLDERS: NoteFolder[] = [
-  { id: 'security-program', name: 'Security Program', color: '#2563eb', collapsed: false },
-  { id: 'risk-reviews', name: 'Risk Reviews', color: '#dc2626', collapsed: false },
-  { id: 'audit-prep', name: 'Audit Prep', color: '#d97706', collapsed: false },
-];
-
-const DEFAULT_NOTES: Note[] = [
-  {
-    id: 'note-security-overview',
-    title: 'Security Program Overview',
-    folderId: 'security-program',
-    content: `Security Program Overview
-
-Current security program maturity is Level 3, with strong policy coverage and improving evidence collection.
-
-Priorities
-Complete MFA enforcement for remaining legacy systems.
-Map NIST CSF 2.0 GOVERN categories to current policies.
-Prepare SOC 2 evidence owners before fieldwork.
-
-Open Questions
-Which vendor controls should inherit risk owner approvals?
-Do we need monthly or quarterly executive reporting?`,
-    tags: ['NIST', 'strategy', 'Q2-2026'],
-    pinned: true,
-    access: 'Team',
-    ownerId: 'alex',
-    sharedWith: [
-      { memberId: 'sarah', permission: 'Can edit' },
-      { memberId: 'elena', permission: 'Can comment' },
-    ],
-    createdAt: '2026-04-01',
-    updatedAt: '2026-05-09',
-  },
-  {
-    id: 'note-mfa-gap',
-    title: 'MFA Gap Analysis',
-    folderId: 'risk-reviews',
-    content: `MFA Gap Analysis
-
-18% of users still do not have MFA enrolled in Okta.
-
-Affected Systems
-Legacy ERP
-Vendor portal
-Development environment
-
-Remediation Plan
-Identify accounts without MFA.
-Send mandatory enrollment notification.
-Enforce MFA after the grace period.`,
-    tags: ['MFA', 'identity', 'risk'],
-    pinned: false,
-    access: 'Shared',
-    ownerId: 'sarah',
-    sharedWith: [
-      { memberId: 'alex', permission: 'Can edit' },
-      { memberId: 'david', permission: 'Can view' },
-    ],
-    createdAt: '2026-04-15',
-    updatedAt: '2026-05-08',
-  },
-  {
-    id: 'note-soc2-checklist',
-    title: 'SOC 2 Evidence Checklist',
-    folderId: 'audit-prep',
-    content: `SOC 2 Evidence Checklist
-
-Documentation
-Security policy updated.
-Risk assessment completed.
-Vendor list finalized.
-Training records exported.
-
-Evidence
-Access review logs.
-Q2 penetration test report.
-Incident response tabletop summary.`,
-    tags: ['SOC2', 'audit', 'evidence'],
-    pinned: true,
-    access: 'Private',
-    ownerId: 'michael',
-    sharedWith: [],
-    createdAt: '2026-05-07',
-    updatedAt: '2026-05-10',
-  },
-];
 
 const ACCESS_META: Record<AccessLevel, { label: string; icon: React.ReactNode; className: string }> = {
   Private: {
@@ -202,17 +91,6 @@ function wordCount(text: string) {
   return htmlToText(text).trim().split(/\s+/).filter(Boolean).length;
 }
 
-function readStorage<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw) as T;
-    return parsed ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 function cleanNoteContent(content: string) {
   return content
     .replace(/^#{1,6}\s+/gm, '')
@@ -244,13 +122,6 @@ function textToEditorHtml(value: string) {
     .join('');
 }
 
-function readStoredNotes() {
-  return readStorage<Note[]>(NOTES_STORAGE_KEY, DEFAULT_NOTES).map(note => ({
-    ...note,
-    content: cleanNoteContent(note.content),
-  }));
-}
-
 function memberById(id: string) {
   return TEAM_MEMBERS.find(member => member.id === id) ?? TEAM_MEMBERS[0];
 }
@@ -264,9 +135,9 @@ function nextFolderName(folders: NoteFolder[]) {
 }
 
 export function NotesView() {
-  const [folders, setFolders] = useState<NoteFolder[]>(() => readStorage(FOLDERS_STORAGE_KEY, DEFAULT_FOLDERS));
-  const [notes, setNotes] = useState<Note[]>(readStoredNotes);
-  const [selectedNoteId, setSelectedNoteId] = useState<string>(() => readStoredNotes()[0]?.id ?? '');
+  const [folders, setFolders] = useState<NoteFolder[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [selectedNoteId, setSelectedNoteId] = useState<string>('');
   const [activeScope, setActiveScope] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -276,16 +147,29 @@ export function NotesView() {
   const [tagDraft, setTagDraft] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
+  const hydrated = useRef(false);
 
   const activeNote = notes.find(note => note.id === selectedNoteId) ?? notes[0];
 
   useEffect(() => {
-    localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
-  }, [notes]);
+    let active = true;
+    api.getNotesWorkspace()
+      .then(ws => {
+        if (!active) return;
+        setFolders(ws.folders);
+        const cleaned = ws.notes.map(note => ({ ...note, content: cleanNoteContent(note.content) }));
+        setNotes(cleaned);
+        setSelectedNoteId(cleaned[0]?.id ?? '');
+      })
+      .catch(() => { /* keep empty workspace on failure */ })
+      .finally(() => { if (active) hydrated.current = true; });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem(FOLDERS_STORAGE_KEY, JSON.stringify(folders));
-  }, [folders]);
+    if (!hydrated.current) return;
+    void api.replaceNotesWorkspace({ notes, folders });
+  }, [notes, folders]);
 
   useEffect(() => {
     if (!notes.length) {

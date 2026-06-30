@@ -17,6 +17,7 @@ import biaRouter from './routes/bia.js';
 import controlsRouter from './routes/controls.js';
 import evidenceRouter from './routes/evidence.js';
 import auditsRouter from './routes/audits.js';
+import notesRouter from './routes/notes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -47,6 +48,7 @@ app.use('/api/bia', biaRouter);
 app.use('/api/controls', controlsRouter);
 app.use('/api/evidence', evidenceRouter);
 app.use('/api/audits', auditsRouter);
+app.use('/api/notes', notesRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {
