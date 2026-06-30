@@ -131,3 +131,36 @@ export interface AppNotification {
   createdAt: string;
   read: boolean;
 }
+
+export type PolicyStatus = 'Draft' | 'Under Review' | 'Approved' | 'Published' | 'Archived';
+export type PolicyCategory = 'Security' | 'Privacy' | 'HR' | 'Operations' | 'Compliance';
+
+export interface PolicyVersion {
+  version: string;
+  date: string;
+  author: string;
+  summary: string;
+}
+
+export interface PolicyAttestation {
+  name: string;
+  role: string;
+  date: string | null;
+  status: 'Confirmed' | 'Pending' | 'Overdue';
+}
+
+export interface Policy {
+  id: string;
+  title: string;
+  version: string;
+  owner: string;
+  status: PolicyStatus;
+  category: PolicyCategory;
+  nextReview: string;
+  lastUpdated: string;
+  description: string;
+  frameworks: { code: string; name: string }[];
+  versions: PolicyVersion[];
+  attestations: PolicyAttestation[];
+  exceptions: number;
+}

@@ -11,6 +11,7 @@ import tasksRouter from './routes/tasks.js';
 import calendarRouter from './routes/calendar.js';
 import nistRouter from './routes/nist.js';
 import notificationsRouter from './routes/notifications.js';
+import policiesRouter from './routes/policies.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/tasks', tasksRouter);
 app.use('/api/calendar', calendarRouter);
 app.use('/api/nist', nistRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/policies', policiesRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {
