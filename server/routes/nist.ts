@@ -22,7 +22,9 @@ router.put('/:fn', (req: Request, res: Response) => {
   const { totalControls, implementedControls } = req.body;
   if (totalControls !== undefined) nistStatus[idx].totalControls = totalControls;
   if (implementedControls !== undefined) nistStatus[idx].implementedControls = implementedControls;
-  nistStatus[idx].score = Math.round((nistStatus[idx].implementedControls / nistStatus[idx].totalControls) * 100);
+  nistStatus[idx].score = nistStatus[idx].totalControls > 0
+    ? Math.round((nistStatus[idx].implementedControls / nistStatus[idx].totalControls) * 100)
+    : 0;
   res.json(nistStatus[idx]);
 });
 
