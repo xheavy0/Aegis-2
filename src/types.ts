@@ -310,3 +310,37 @@ export interface AuditProgram {
   nextRecommendations: string;
   archivedAt?: string;
 }
+
+export type NoteAccessLevel = 'Private' | 'Team' | 'Shared';
+export type NotePermission = 'Can view' | 'Can comment' | 'Can edit';
+
+export interface NoteShareEntry {
+  memberId: string;
+  permission: NotePermission;
+}
+
+export interface NoteFolder {
+  id: string;
+  name: string;
+  color: string;
+  collapsed: boolean;
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  folderId: string | null;
+  tags: string[];
+  pinned: boolean;
+  access: NoteAccessLevel;
+  ownerId: string;
+  sharedWith: NoteShareEntry[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotesWorkspace {
+  notes: Note[];
+  folders: NoteFolder[];
+}

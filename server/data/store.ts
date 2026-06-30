@@ -1,4 +1,4 @@
-import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess, Control, EvidenceItem, AuditProgram } from '../../src/types.js';
+import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess, Control, EvidenceItem, AuditProgram, Note, NoteFolder } from '../../src/types.js';
 
 export let nistStatus: NISTStatus[] = [
   { function: 'GOVERN', score: 85, totalControls: 31, implementedControls: 26 },
@@ -349,6 +349,100 @@ export let auditPrograms: AuditProgram[] = [
 export function setAuditPrograms(arr: AuditProgram[]): AuditProgram[] {
   auditPrograms = arr;
   return auditPrograms;
+}
+
+export let noteFolders: NoteFolder[] = [
+  { id: 'security-program', name: 'Security Program', color: '#2563eb', collapsed: false },
+  { id: 'risk-reviews', name: 'Risk Reviews', color: '#dc2626', collapsed: false },
+  { id: 'audit-prep', name: 'Audit Prep', color: '#d97706', collapsed: false },
+];
+
+export let notes: Note[] = [
+  {
+    id: 'note-security-overview',
+    title: 'Security Program Overview',
+    folderId: 'security-program',
+    content: `Security Program Overview
+
+Current security program maturity is Level 3, with strong policy coverage and improving evidence collection.
+
+Priorities
+Complete MFA enforcement for remaining legacy systems.
+Map NIST CSF 2.0 GOVERN categories to current policies.
+Prepare SOC 2 evidence owners before fieldwork.
+
+Open Questions
+Which vendor controls should inherit risk owner approvals?
+Do we need monthly or quarterly executive reporting?`,
+    tags: ['NIST', 'strategy', 'Q2-2026'],
+    pinned: true,
+    access: 'Team',
+    ownerId: 'alex',
+    sharedWith: [
+      { memberId: 'sarah', permission: 'Can edit' },
+      { memberId: 'elena', permission: 'Can comment' },
+    ],
+    createdAt: '2026-04-01',
+    updatedAt: '2026-05-09',
+  },
+  {
+    id: 'note-mfa-gap',
+    title: 'MFA Gap Analysis',
+    folderId: 'risk-reviews',
+    content: `MFA Gap Analysis
+
+18% of users still do not have MFA enrolled in Okta.
+
+Affected Systems
+Legacy ERP
+Vendor portal
+Development environment
+
+Remediation Plan
+Identify accounts without MFA.
+Send mandatory enrollment notification.
+Enforce MFA after the grace period.`,
+    tags: ['MFA', 'identity', 'risk'],
+    pinned: false,
+    access: 'Shared',
+    ownerId: 'sarah',
+    sharedWith: [
+      { memberId: 'alex', permission: 'Can edit' },
+      { memberId: 'david', permission: 'Can view' },
+    ],
+    createdAt: '2026-04-15',
+    updatedAt: '2026-05-08',
+  },
+  {
+    id: 'note-soc2-checklist',
+    title: 'SOC 2 Evidence Checklist',
+    folderId: 'audit-prep',
+    content: `SOC 2 Evidence Checklist
+
+Documentation
+Security policy updated.
+Risk assessment completed.
+Vendor list finalized.
+Training records exported.
+
+Evidence
+Access review logs.
+Q2 penetration test report.
+Incident response tabletop summary.`,
+    tags: ['SOC2', 'audit', 'evidence'],
+    pinned: true,
+    access: 'Private',
+    ownerId: 'michael',
+    sharedWith: [],
+    createdAt: '2026-05-07',
+    updatedAt: '2026-05-10',
+  },
+];
+
+export function setNotesWorkspace(w: { notes: Note[]; folders: NoteFolder[] }) {
+  notes = w.notes;
+  noteFolders = w.folders;
+  return { notes, folders: noteFolders };
 }
 
 export let notifications: AppNotification[] = [];
