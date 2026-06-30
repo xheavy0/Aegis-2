@@ -7,14 +7,30 @@ export interface NISTStatus {
   implementedControls: number;
 }
 
+export type RiskCategory = 'Cyber' | 'Operational' | 'Financial' | 'Compliance' | 'Strategic' | 'Reputational';
+export type RiskTreatment = 'Mitigate' | 'Accept' | 'Transfer' | 'Avoid';
+export type RiskStatus = 'Open' | 'Mitigating' | 'Accepted' | 'Transferred' | 'Closed';
+export type RiskTrend = 'Increasing' | 'Stable' | 'Decreasing';
+
 export interface Risk {
   id: string;
   title: string;
-  impact: 'Low' | 'Medium' | 'High' | 'Critical';
-  likelihood: 'Low' | 'Medium' | 'High';
-  status: 'Open' | 'Mitigated' | 'Accepted' | 'Transferred';
+  description: string;
+  category: RiskCategory;
   owner: string;
-  updatedAt: string;
+  inherentLikelihood: number; // 1-5
+  inherentImpact: number;     // 1-5
+  residualLikelihood: number;
+  residualImpact: number;
+  treatment: RiskTreatment;
+  treatmentProgress: number; // 0-100
+  status: RiskStatus;
+  dateIdentified: string;
+  reviewDate: string;
+  financialExposure: number;
+  riskTrend: RiskTrend;
+  treatmentPlan: string;
+  linkedControls: number;
 }
 
 export interface Finding {

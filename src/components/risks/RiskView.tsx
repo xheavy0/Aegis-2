@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   AlertTriangle, TrendingUp, TrendingDown, Minus, Search, Plus, X,
   Shield, DollarSign, Activity, CheckCircle2, Clock, User, ChevronRight,
@@ -6,152 +6,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { AppNotification } from '@/src/types';
+import { AppNotification, Risk, RiskCategory, RiskTreatment, RiskStatus, RiskTrend } from '@/src/types';
+import { api } from '@/src/lib/api';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
   CartesianGrid, Cell, PieChart, Pie, Legend
 } from 'recharts';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type RiskCategory = 'Cyber' | 'Operational' | 'Financial' | 'Compliance' | 'Strategic' | 'Reputational';
-type RiskTreatment = 'Mitigate' | 'Accept' | 'Transfer' | 'Avoid';
-type RiskStatus = 'Open' | 'Mitigating' | 'Accepted' | 'Transferred' | 'Closed';
-type RiskTrend = 'Increasing' | 'Stable' | 'Decreasing';
-
-interface Risk {
-  id: string;
-  title: string;
-  description: string;
-  category: RiskCategory;
-  owner: string;
-  inherentLikelihood: number; // 1-5
-  inherentImpact: number;     // 1-5
-  residualLikelihood: number;
-  residualImpact: number;
-  treatment: RiskTreatment;
-  treatmentProgress: number; // 0-100
-  status: RiskStatus;
-  dateIdentified: string;
-  reviewDate: string;
-  financialExposure: number;
-  riskTrend: RiskTrend;
-  treatmentPlan: string;
-  linkedControls: number;
-}
-
-// ─── Data ────────────────────────────────────────────────────────────────────
-
-const RISKS: Risk[] = [
-  {
-    id: 'R-101', title: 'Ransomware Attack on Cloud Infrastructure', category: 'Cyber',
-    description: 'Adversarial encryption of production cloud workloads could halt all operations and result in significant data loss and regulatory penalties.',
-    owner: 'Alex C.', inherentLikelihood: 4, inherentImpact: 5, residualLikelihood: 2, residualImpact: 5,
-    treatment: 'Mitigate', treatmentProgress: 65, status: 'Mitigating',
-    dateIdentified: '2025-09-01', reviewDate: '2026-06-01', financialExposure: 1200000, riskTrend: 'Stable',
-    treatmentPlan: 'Deploy immutable backup strategy, enhanced EDR tooling, network segmentation, and incident response runbooks.',
-    linkedControls: 8,
-  },
-  {
-    id: 'R-102', title: 'Third-Party Data Breach via Supplier Access', category: 'Operational',
-    description: 'A compromised Tier 1 vendor with access to customer PII could result in a significant data breach and GDPR enforcement action.',
-    owner: 'Sarah L.', inherentLikelihood: 3, inherentImpact: 5, residualLikelihood: 2, residualImpact: 3,
-    treatment: 'Transfer', treatmentProgress: 80, status: 'Mitigating',
-    dateIdentified: '2025-10-12', reviewDate: '2026-06-15', financialExposure: 850000, riskTrend: 'Decreasing',
-    treatmentPlan: 'Cyber insurance policy updated to include supply chain. Vendor MFA enforcement and data access minimisation.',
-    linkedControls: 5,
-  },
-  {
-    id: 'R-103', title: 'GDPR / Data Protection Regulatory Non-Compliance', category: 'Compliance',
-    description: 'Gaps in data retention, consent management, and cross-border transfer safeguards expose the organisation to significant fines.',
-    owner: 'Alex C.', inherentLikelihood: 3, inherentImpact: 4, residualLikelihood: 1, residualImpact: 3,
-    treatment: 'Mitigate', treatmentProgress: 90, status: 'Mitigating',
-    dateIdentified: '2025-06-05', reviewDate: '2026-07-01', financialExposure: 400000, riskTrend: 'Decreasing',
-    treatmentPlan: 'DPA updated, Privacy by Design training rolled out, cross-border SCCs reviewed by legal.',
-    linkedControls: 12,
-  },
-  {
-    id: 'R-104', title: 'Malicious Insider Threat — Privileged Access Abuse', category: 'Cyber',
-    description: 'A disgruntled or compromised insider with privileged access could exfiltrate sensitive data or sabotage systems.',
-    owner: 'David M.', inherentLikelihood: 3, inherentImpact: 4, residualLikelihood: 2, residualImpact: 3,
-    treatment: 'Mitigate', treatmentProgress: 45, status: 'Mitigating',
-    dateIdentified: '2025-11-20', reviewDate: '2026-05-20', financialExposure: 320000, riskTrend: 'Increasing',
-    treatmentPlan: 'Privileged Access Management (PAM) deployment underway. User Behaviour Analytics (UBA) in evaluation.',
-    linkedControls: 6,
-  },
-  {
-    id: 'R-105', title: 'Critical Supplier Business Continuity Failure', category: 'Operational',
-    description: 'Single-source dependency on key cloud providers. If a primary IaaS provider fails, core services could be unavailable for extended periods.',
-    owner: 'Alex C.', inherentLikelihood: 2, inherentImpact: 5, residualLikelihood: 1, residualImpact: 4,
-    treatment: 'Mitigate', treatmentProgress: 55, status: 'Mitigating',
-    dateIdentified: '2025-08-10', reviewDate: '2026-08-10', financialExposure: 680000, riskTrend: 'Stable',
-    treatmentPlan: 'Multi-cloud architecture roadmap approved. Pilot of redundant DR environment in Azure underway.',
-    linkedControls: 4,
-  },
-  {
-    id: 'R-106', title: 'Unpatched Critical CVEs in Production Systems', category: 'Cyber',
-    description: 'Known critical vulnerabilities in production infrastructure that have not yet been patched due to change freeze constraints.',
-    owner: 'David M.', inherentLikelihood: 4, inherentImpact: 4, residualLikelihood: 3, residualImpact: 3,
-    treatment: 'Mitigate', treatmentProgress: 40, status: 'Open',
-    dateIdentified: '2026-02-14', reviewDate: '2026-05-14', financialExposure: 210000, riskTrend: 'Increasing',
-    treatmentPlan: 'Patch management sprint initiated. Compensating controls (WAF, IPS rules) deployed pending patch window.',
-    linkedControls: 3,
-  },
-  {
-    id: 'R-107', title: 'Financial Fraud via Payment System Manipulation', category: 'Financial',
-    description: 'Fraudulent manipulation of payment flows through social engineering or BEC targeting finance staff.',
-    owner: 'Elena R.', inherentLikelihood: 2, inherentImpact: 3, residualLikelihood: 1, residualImpact: 2,
-    treatment: 'Accept', treatmentProgress: 100, status: 'Accepted',
-    dateIdentified: '2025-04-01', reviewDate: '2026-04-01', financialExposure: 75000, riskTrend: 'Stable',
-    treatmentPlan: 'Dual-authorisation enforced for transactions above threshold. Risk accepted within appetite; insurance cover in place.',
-    linkedControls: 7,
-  },
-  {
-    id: 'R-108', title: 'AI Model Bias Resulting in Regulatory Scrutiny', category: 'Strategic',
-    description: 'AI-based decision tools used in customer profiling may introduce bias, triggering regulatory investigation and reputational damage.',
-    owner: 'Elena R.', inherentLikelihood: 2, inherentImpact: 3, residualLikelihood: 1, residualImpact: 2,
-    treatment: 'Transfer', treatmentProgress: 70, status: 'Mitigating',
-    dateIdentified: '2026-01-08', reviewDate: '2026-07-08', financialExposure: 180000, riskTrend: 'Stable',
-    treatmentPlan: 'AI Governance policy drafted. Bias audits contracted to specialist external firm. Model cards introduced.',
-    linkedControls: 2,
-  },
-  {
-    id: 'R-109', title: 'Key Person Dependency — Security Leadership', category: 'Strategic',
-    description: 'Critical institutional knowledge and programme ownership concentrated in one or two individuals. Departure risk is high.',
-    owner: 'Sarah L.', inherentLikelihood: 3, inherentImpact: 3, residualLikelihood: 2, residualImpact: 2,
-    treatment: 'Mitigate', treatmentProgress: 30, status: 'Open',
-    dateIdentified: '2025-12-01', reviewDate: '2026-06-01', financialExposure: 90000, riskTrend: 'Increasing',
-    treatmentPlan: 'Succession planning programme initiated. Knowledge base documentation being formalised.',
-    linkedControls: 1,
-  },
-  {
-    id: 'R-110', title: 'DDoS Attack Causing Service Unavailability', category: 'Cyber',
-    description: 'Volumetric DDoS targeting public-facing services could cause prolonged outages and SLA breaches.',
-    owner: 'David M.', inherentLikelihood: 3, inherentImpact: 4, residualLikelihood: 1, residualImpact: 3,
-    treatment: 'Mitigate', treatmentProgress: 60, status: 'Mitigating',
-    dateIdentified: '2025-07-22', reviewDate: '2026-07-22', financialExposure: 150000, riskTrend: 'Stable',
-    treatmentPlan: 'CDN-based DDoS scrubbing deployed. Rate limiting and geo-blocking configured. Runbook tested quarterly.',
-    linkedControls: 5,
-  },
-  {
-    id: 'R-111', title: 'Data Residency Non-Compliance — Cross-Border Transfers', category: 'Compliance',
-    description: 'Data processed by US-based analytics sub-processors may violate EU data residency obligations under GDPR Article 44.',
-    owner: 'Alex C.', inherentLikelihood: 2, inherentImpact: 4, residualLikelihood: 1, residualImpact: 2,
-    treatment: 'Mitigate', treatmentProgress: 85, status: 'Mitigating',
-    dateIdentified: '2025-03-14', reviewDate: '2026-03-14', financialExposure: 220000, riskTrend: 'Decreasing',
-    treatmentPlan: 'SCCs executed with all affected vendors. Data flow mapping completed. DPA review ongoing.',
-    linkedControls: 9,
-  },
-  {
-    id: 'R-112', title: 'Reputational Damage from Public Security Incident', category: 'Reputational',
-    description: 'A publicly disclosed breach or compliance failure could erode customer trust, trigger media coverage, and impact revenue.',
-    owner: 'Sarah L.', inherentLikelihood: 2, inherentImpact: 4, residualLikelihood: 1, residualImpact: 3,
-    treatment: 'Mitigate', treatmentProgress: 50, status: 'Open',
-    dateIdentified: '2026-01-20', reviewDate: '2026-07-20', financialExposure: 350000, riskTrend: 'Stable',
-    treatmentPlan: 'Crisis comms playbook drafted. PR firm on retainer. Board-level cyber briefing cadence established.',
-    linkedControls: 3,
-  },
-];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -422,11 +282,35 @@ type Tab = typeof TABS[number];
 
 export function RiskView({ onNotify }: RiskViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
-  const [risks, setRisks] = useState<Risk[]>(RISKS);
+  const [risks, setRisks] = useState<Risk[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedRisk, setSelectedRisk] = useState<Risk | null>(null);
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState<RiskCategory | 'All'>('All');
   const [filterStatus, setFilterStatus] = useState<RiskStatus | 'All'>('All');
+
+  useEffect(() => {
+    let active = true;
+    api.getRisks()
+      .then(data => { if (active) { setRisks(data); setError(null); } })
+      .catch(err => { if (active) setError(err.message ?? 'Failed to load risks'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  async function persistUpdate(updated: Risk) {
+    const prev = risks;
+    setRisks(p => p.map(r => r.id === updated.id ? updated : r));
+    setSelectedRisk(updated);
+    try {
+      const saved = await api.updateRisk(updated.id, updated);
+      setRisks(p => p.map(r => r.id === saved.id ? saved : r));
+    } catch (err) {
+      setRisks(prev);
+      setError(err instanceof Error ? err.message : 'Failed to save risk');
+    }
+  }
 
   const stats = useMemo(() => {
     const scores = risks.map(r => riskScore(r.inherentLikelihood, r.inherentImpact));
@@ -463,6 +347,17 @@ export function RiskView({ onNotify }: RiskViewProps) {
         </div>
         <button className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" />Declare Risk</button>
       </header>
+
+      {loading && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <Clock className="w-4 h-4 animate-spin" /> Loading risk register…
+        </div>
+      )}
+      {error && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      )}
 
       {/* KPI Strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -711,7 +606,7 @@ export function RiskView({ onNotify }: RiskViewProps) {
       <AnimatePresence>
         {selectedRisk && (
           <RiskDetail risk={selectedRisk} onClose={() => setSelectedRisk(null)}
-            onUpdate={updated => { setRisks(prev => prev.map(r => r.id === updated.id ? updated : r)); setSelectedRisk(updated); }} />
+            onUpdate={updated => { void persistUpdate(updated); }} />
         )}
       </AnimatePresence>
     </div>
