@@ -1,4 +1,4 @@
-import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess, Control, EvidenceItem } from '../../src/types.js';
+import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess, Control, EvidenceItem, AuditProgram } from '../../src/types.js';
 
 export let nistStatus: NISTStatus[] = [
   { function: 'GOVERN', score: 85, totalControls: 31, implementedControls: 26 },
@@ -279,6 +279,77 @@ export let evidenceItems: EvidenceItem[] = [
     warnings: [],
   },
 ];
+
+export let auditPrograms: AuditProgram[] = [
+  {
+    id: 'AUD-2026-01',
+    title: 'SOC 2 Type II Readiness',
+    type: 'SOC 2',
+    status: 'Review',
+    auditor: 'Northstar Assurance',
+    owner: 'Alex C.',
+    startDate: '2026-04-08',
+    dueDate: '2026-06-21',
+    score: 78,
+    scope: ['Security', 'Availability', 'Confidentiality'],
+    evidence: [
+      { id: 'EV-A1', name: 'Access Review Export.csv', category: 'Access Review', uploadedBy: 'Sarah L.', uploadedAt: '2026-05-05', status: 'Accepted', size: '248 KB' },
+      { id: 'EV-A2', name: 'Incident Response Tabletop.pdf', category: 'Incident Response', uploadedBy: 'Alex C.', uploadedAt: '2026-05-08', status: 'Uploaded', size: '1.8 MB' },
+    ],
+    findings: [
+      { id: 'AF-1', type: 'Strength', title: 'Evidence ownership is clear', detail: 'Control owners are mapped and response times are improving.', severity: 'Low', owner: 'Alex C.', createdAt: '2026-05-09' },
+      { id: 'AF-2', type: 'Gap', title: 'Vendor evidence is incomplete', detail: 'Two tier-1 vendors are missing refreshed SOC reports.', severity: 'High', owner: 'Elena R.', createdAt: '2026-05-10' },
+    ],
+    finalAssessment: 'Evidence readiness is strong, but vendor documentation must be closed before final fieldwork.',
+    nextRecommendations: 'Start vendor evidence collection 30 days earlier and add weekly owner reminders.',
+  },
+  {
+    id: 'AUD-2026-02',
+    title: 'Privileged Access Internal Audit',
+    type: 'Internal',
+    status: 'Fieldwork',
+    auditor: 'Internal Audit',
+    owner: 'Sarah L.',
+    startDate: '2026-05-01',
+    dueDate: '2026-05-29',
+    score: 64,
+    scope: ['IAM', 'MFA', 'Admin Accounts'],
+    evidence: [
+      { id: 'EV-B1', name: 'Privileged Groups.xlsx', category: 'IAM', uploadedBy: 'David M.', uploadedAt: '2026-05-07', status: 'Uploaded', size: '524 KB' },
+    ],
+    findings: [
+      { id: 'AF-3', type: 'Observation', title: 'Break-glass process needs testing', detail: 'Documentation exists, but there is no recent test record.', severity: 'Medium', owner: 'David M.', createdAt: '2026-05-09' },
+    ],
+    finalAssessment: '',
+    nextRecommendations: '',
+  },
+  {
+    id: 'AUD-2025-11',
+    title: 'External Penetration Test Closure',
+    type: 'External',
+    status: 'Archived',
+    auditor: 'RedPeak Labs',
+    owner: 'Michael K.',
+    startDate: '2025-12-04',
+    dueDate: '2026-01-16',
+    score: 91,
+    scope: ['Web App', 'API', 'Network Perimeter'],
+    evidence: [
+      { id: 'EV-C1', name: 'Final Pentest Report.pdf', category: 'Penetration Test', uploadedBy: 'Michael K.', uploadedAt: '2026-01-14', status: 'Accepted', size: '4.2 MB' },
+    ],
+    findings: [
+      { id: 'AF-4', type: 'Strength', title: 'Critical issues remediated', detail: 'All critical and high findings were closed before final report.', severity: 'Low', owner: 'Michael K.', createdAt: '2026-01-15' },
+    ],
+    finalAssessment: 'Audit closed successfully. Residual risk is low after remediation validation.',
+    nextRecommendations: 'Run API-focused testing earlier in the quarter and keep retest evidence attached to each finding.',
+    archivedAt: '2026-01-16',
+  },
+];
+
+export function setAuditPrograms(arr: AuditProgram[]): AuditProgram[] {
+  auditPrograms = arr;
+  return auditPrograms;
+}
 
 export let notifications: AppNotification[] = [];
 

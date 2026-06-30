@@ -1,4 +1,4 @@
-import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess, Control, EvidenceItem } from '../types';
+import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset, BIAProcess, Control, EvidenceItem, AuditProgram } from '../types';
 
 const BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000') + '/api';
 
@@ -88,6 +88,10 @@ export const api = {
   createEvidence: (body: Omit<EvidenceItem, 'id'>) => req<EvidenceItem>('POST', '/evidence', body),
   updateEvidence: (id: string, body: Partial<EvidenceItem>) => req<EvidenceItem>('PUT', `/evidence/${id}`, body),
   deleteEvidence: (id: string) => req<void>('DELETE', `/evidence/${id}`),
+
+  // Audits (whole-collection persistence)
+  getAudits: () => req<AuditProgram[]>('GET', '/audits'),
+  replaceAudits: (body: AuditProgram[]) => req<AuditProgram[]>('PUT', '/audits', body),
 
   // Notifications
   getNotifications: (audience?: string) =>
