@@ -12,6 +12,7 @@ import calendarRouter from './routes/calendar.js';
 import nistRouter from './routes/nist.js';
 import notificationsRouter from './routes/notifications.js';
 import policiesRouter from './routes/policies.js';
+import assetsRouter from './routes/assets.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -37,6 +38,7 @@ app.use('/api/calendar', calendarRouter);
 app.use('/api/nist', nistRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/policies', policiesRouter);
+app.use('/api/assets', assetsRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

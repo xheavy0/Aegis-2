@@ -1,4 +1,4 @@
-import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy } from '../../src/types.js';
+import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent, AppNotification, Policy, Asset } from '../../src/types.js';
 
 export let nistStatus: NISTStatus[] = [
   { function: 'GOVERN', score: 85, totalControls: 31, implementedControls: 26 },
@@ -85,12 +85,35 @@ export let policies: Policy[] = [
 export let notifications: AppNotification[] = [];
 
 export function nextPolicyId(): string {
-  const max = policies.reduce((m, p) => {
-    const n = parseInt(p.id.split('-')[1], 10);
+  return nextSeqId(policies, 'POL');
+}
+
+// Generic sequential id generator for `PREFIX-NNN` style ids.
+export function nextSeqId(items: { id: string }[], prefix: string, pad = 3): string {
+  const max = items.reduce((m, it) => {
+    const n = parseInt(it.id.split('-')[1], 10);
     return Number.isFinite(n) && n > m ? n : m;
   }, 0);
-  return `POL-${String(max + 1).padStart(3, '0')}`;
+  return `${prefix}-${String(max + 1).padStart(pad, '0')}`;
 }
+
+export let assets: Asset[] = [
+  { id: 'A-001', name: 'prod-web-01', type: 'Server', env: 'On-Prem', status: 'Online', ip: '10.0.1.10', os: 'Ubuntu 22.04', owner: 'Alex C.', location: 'DC1 / Rack 3A', lastSeen: 'Live', tags: ['prod', 'web'] },
+  { id: 'A-002', name: 'prod-web-02', type: 'Server', env: 'On-Prem', status: 'Online', ip: '10.0.1.11', os: 'Ubuntu 22.04', owner: 'Alex C.', location: 'DC1 / Rack 3B', lastSeen: 'Live', tags: ['prod', 'web'] },
+  { id: 'A-003', name: 'prod-db-primary', type: 'Server', env: 'On-Prem', status: 'Online', ip: '10.0.2.10', os: 'RHEL 9.2', owner: 'David M.', location: 'DC1 / Rack 5A', lastSeen: 'Live', tags: ['prod', 'db', 'critical'] },
+  { id: 'A-004', name: 'prod-db-replica', type: 'Server', env: 'On-Prem', status: 'Degraded', ip: '10.0.2.11', os: 'RHEL 9.2', owner: 'David M.', location: 'DC1 / Rack 5B', lastSeen: '2m ago', tags: ['prod', 'db'] },
+  { id: 'A-005', name: 'dev-build-01', type: 'Server', env: 'On-Prem', status: 'Online', ip: '10.0.3.10', os: 'Debian 12', owner: 'Sarah L.', location: 'DC2 / Rack 1A', lastSeen: 'Live', tags: ['dev', 'build'] },
+  { id: 'A-006', name: 'aws-ec2-api-prod', type: 'Cloud', env: 'Cloud', status: 'Online', ip: '172.31.10.5', os: 'Amazon Linux 2', owner: 'Alex C.', location: 'AWS / us-east-1', lastSeen: 'Live', tags: ['prod', 'api', 'aws'] },
+  { id: 'A-007', name: 'aws-ec2-api-stg', type: 'Cloud', env: 'Cloud', status: 'Online', ip: '172.31.10.6', os: 'Amazon Linux 2', owner: 'Sarah L.', location: 'AWS / us-east-1', lastSeen: 'Live', tags: ['staging', 'api', 'aws'] },
+  { id: 'A-008', name: 'aws-rds-prod', type: 'Cloud', env: 'Cloud', status: 'Online', ip: '172.31.20.5', os: 'AWS RDS / PG 15', owner: 'David M.', location: 'AWS / us-east-1', lastSeen: 'Live', tags: ['prod', 'db', 'aws', 'critical'] },
+  { id: 'A-009', name: 'gcp-gke-cluster', type: 'Cloud', env: 'Cloud', status: 'Online', ip: '10.128.0.10', os: 'GKE / k8s 1.29', owner: 'Elena R.', location: 'GCP / us-central1', lastSeen: 'Live', tags: ['prod', 'k8s', 'gcp'] },
+  { id: 'A-010', name: 'azure-vm-backup', type: 'Cloud', env: 'Cloud', status: 'Offline', ip: '10.0.0.4', os: 'Windows Server 2022', owner: 'Sarah L.', location: 'Azure / eastus', lastSeen: '1h ago', tags: ['backup', 'azure'] },
+  { id: 'A-011', name: 'core-sw-01', type: 'Network', env: 'On-Prem', status: 'Online', ip: '10.0.0.1', os: 'Cisco IOS 17.6', owner: 'David M.', location: 'DC1 / MDF', lastSeen: 'Live', tags: ['network', 'core'] },
+  { id: 'A-012', name: 'core-sw-02', type: 'Network', env: 'On-Prem', status: 'Online', ip: '10.0.0.2', os: 'Cisco IOS 17.6', owner: 'David M.', location: 'DC1 / MDF', lastSeen: 'Live', tags: ['network', 'core'] },
+  { id: 'A-013', name: 'fw-edge-01', type: 'Network', env: 'On-Prem', status: 'Online', ip: '203.0.113.1', os: 'Palo Alto PAN-OS 11', owner: 'Alex C.', location: 'DC1 / Edge', lastSeen: 'Live', tags: ['network', 'firewall', 'critical'] },
+  { id: 'A-014', name: 'access-sw-floor2', type: 'Network', env: 'On-Prem', status: 'Degraded', ip: '10.0.1.254', os: 'Juniper JunOS 22', owner: 'David M.', location: 'Office / Floor 2', lastSeen: '5m ago', tags: ['network', 'access'] },
+  { id: 'A-015', name: 'vpn-concentrator', type: 'Network', env: 'Hybrid', status: 'Online', ip: '10.0.0.10', os: 'Cisco ASA 9.18', owner: 'Alex C.', location: 'DC1 / Edge', lastSeen: 'Live', tags: ['network', 'vpn'] },
+];
 
 let counters = { R: 112, F: 515, V: 10, T: 8, E: 4, N: 0 };
 
