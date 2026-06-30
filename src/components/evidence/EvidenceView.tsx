@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, X, Upload, CheckCircle2, AlertTriangle, AlertCircle,
   Filter, FileText, Shield, Database, Users, Code2, Monitor,
@@ -9,46 +9,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { EvidenceItem, EvidenceType, EvidenceStatus, EvidenceWarning, EvidenceGap } from '@/src/types';
+import { api } from '@/src/lib/api';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
-type EvidenceType =
-  | 'Policy Document' | 'Screenshot' | 'Config Export' | 'Audit Log'
-  | 'Scan Report' | 'Certificate' | 'Test Result' | 'Training Record'
-  | 'Access Review' | 'API Response';
-
-type EvidenceStatus = 'Valid' | 'Expiring Soon' | 'Expired' | 'Needs Review';
-
-type SourceType = 'manual' | 'integration' | 'api';
-
-interface Gap {
-  control: string;
-  description: string;
-  severity: 'Critical' | 'High' | 'Medium';
-}
-
-interface Warning {
-  message: string;
-  type: 'expiry' | 'coverage' | 'quality' | 'stale';
-}
-
-interface EvidenceItem {
-  id: string;
-  name: string;
-  type: EvidenceType;
-  source: SourceType;
-  integration?: string; // integration id
-  framework: string;
-  controls: string[];
-  status: EvidenceStatus;
-  collectedAt: string;
-  expiresAt: string | null;
-  size?: string;
-  owner: string;
-  gaps: Gap[];
-  warnings: Warning[];
-  tags: string[];
-  description: string;
-}
+type Warning = EvidenceWarning;
+type Gap = EvidenceGap;
 
 // ─── Connected integrations (mirrors ConnectorsView connected list) ─────────────
 const CONNECTED_INTEGRATIONS = [
@@ -68,155 +34,6 @@ const CONNECTED_INTEGRATIONS = [
 ];
 
 // ─── Evidence Data ──────────────────────────────────────────────────────────────
-const EVIDENCE: EvidenceItem[] = [
-  {
-    id: 'EV-001', name: 'AWS IAM Policy Export', type: 'Config Export', source: 'integration', integration: 'aws',
-    framework: 'NIST CSF 2.0', controls: ['PR.AA-01', 'PR.AA-05'], status: 'Valid',
-    collectedAt: '2026-05-10T08:00:00Z', expiresAt: '2026-08-10T00:00:00Z', size: '2.4 MB',
-    owner: 'AWS Auto-Collector', tags: ['IAM', 'Access Control'],
-    description: 'Full export of IAM policies, roles and permission boundaries from all AWS accounts.',
-    gaps: [],
-    warnings: [{ message: 'Root account MFA not enforced in eu-west-1', type: 'coverage' }],
-  },
-  {
-    id: 'EV-002', name: 'CloudTrail Audit Logs — May 2026', type: 'Audit Log', source: 'integration', integration: 'aws',
-    framework: 'NIST CSF 2.0', controls: ['DE.CM-01', 'ID.AM-01'], status: 'Valid',
-    collectedAt: '2026-05-10T06:00:00Z', expiresAt: null, size: '840 MB',
-    owner: 'AWS Auto-Collector', tags: ['Logging', 'Audit Trail'],
-    description: 'CloudTrail logs covering all API calls across us-east-1 and eu-west-1 regions.',
-    gaps: [{ control: 'DE.CM-03', description: 'Personnel activity not included in trail scope', severity: 'Medium' }],
-    warnings: [],
-  },
-  {
-    id: 'EV-003', name: 'Okta MFA Status Report', type: 'Scan Report', source: 'integration', integration: 'okta',
-    framework: 'NIST CSF 2.0', controls: ['PR.AA-03'], status: 'Needs Review',
-    collectedAt: '2026-05-09T12:00:00Z', expiresAt: '2026-06-09T00:00:00Z', size: '1.1 MB',
-    owner: 'Okta Auto-Collector', tags: ['MFA', 'Identity'],
-    description: 'MFA enrollment and enforcement status for all Okta-managed users.',
-    gaps: [
-      { control: 'PR.AA-03', description: '18% of users have MFA disabled', severity: 'Critical' },
-      { control: 'PR.AA-05', description: 'Legacy app authentication bypasses MFA policy', severity: 'High' },
-    ],
-    warnings: [{ message: 'Report covers only active users — inactive users excluded', type: 'coverage' }],
-  },
-  {
-    id: 'EV-004', name: 'GitHub Branch Protection Settings', type: 'Config Export', source: 'integration', integration: 'github',
-    framework: 'NIST CSF 2.0', controls: ['GV.PO-01', 'PR.PS-01'], status: 'Valid',
-    collectedAt: '2026-05-10T07:30:00Z', expiresAt: null, size: '340 KB',
-    owner: 'GitHub Auto-Collector', tags: ['Code Review', 'Branch Protection'],
-    description: 'Branch protection rules, required reviewers and status checks for all production repositories.',
-    gaps: [],
-    warnings: [{ message: '3 repos missing required code owner approval', type: 'quality' }],
-  },
-  {
-    id: 'EV-005', name: 'CrowdStrike EDR Coverage Report', type: 'Scan Report', source: 'integration', integration: 'crowdstrike',
-    framework: 'NIST CSF 2.0', controls: ['DE.CM-01', 'PR.IR-01'], status: 'Valid',
-    collectedAt: '2026-05-10T05:00:00Z', expiresAt: '2026-06-10T00:00:00Z', size: '5.2 MB',
-    owner: 'CrowdStrike Auto-Collector', tags: ['EDR', 'Endpoint'],
-    description: 'Endpoint detection coverage, sensor health and active threat detections across all managed devices.',
-    gaps: [{ control: 'DE.CM-01', description: '12 endpoints offline >7 days', severity: 'High' }],
-    warnings: [],
-  },
-  {
-    id: 'EV-006', name: 'Tenable Vulnerability Scan — Q2 2026', type: 'Scan Report', source: 'integration', integration: 'tenable',
-    framework: 'NIST CSF 2.0', controls: ['ID.RA-01', 'PR.PS-02'], status: 'Valid',
-    collectedAt: '2026-05-01T02:00:00Z', expiresAt: '2026-06-01T00:00:00Z', size: '12.8 MB',
-    owner: 'Tenable Auto-Collector', tags: ['Vulnerability', 'CVE'],
-    description: 'Comprehensive vulnerability scan covering 2,340 assets across on-prem and cloud environments.',
-    gaps: [
-      { control: 'PR.PS-02', description: '47 critical CVEs unpatched >30 days', severity: 'Critical' },
-      { control: 'ID.RA-01', description: 'Network segmentation gaps exposing critical assets', severity: 'High' },
-    ],
-    warnings: [
-      { message: 'Scan coverage dropped to 89% — some cloud assets unreachable', type: 'coverage' },
-      { message: 'Scan data is 9 days old', type: 'stale' },
-    ],
-  },
-  {
-    id: 'EV-007', name: 'Information Security Policy v2.4', type: 'Policy Document', source: 'manual',
-    framework: 'NIST CSF 2.0', controls: ['GV.PO-01', 'GV.PO-02'], status: 'Valid',
-    collectedAt: '2026-02-15T10:00:00Z', expiresAt: '2026-10-15T00:00:00Z', size: '1.8 MB',
-    owner: 'Jane Smith (CISO)', tags: ['Policy', 'Governance'],
-    description: 'Master information security policy document covering all aspects of the security program.',
-    gaps: [],
-    warnings: [{ message: 'Policy review due in 158 days', type: 'expiry' }],
-  },
-  {
-    id: 'EV-008', name: 'Workday Employee Offboarding Audit', type: 'Access Review', source: 'integration', integration: 'workday',
-    framework: 'NIST CSF 2.0', controls: ['PR.AA-01', 'GV.SC-02'], status: 'Needs Review',
-    collectedAt: '2026-05-08T09:00:00Z', expiresAt: '2026-06-08T00:00:00Z', size: '890 KB',
-    owner: 'Workday Auto-Collector', tags: ['HR', 'Offboarding', 'Access'],
-    description: 'Terminated employee access revocation records and timeline compliance.',
-    gaps: [{ control: 'PR.AA-01', description: '3 terminated employees retain active SSO access', severity: 'Critical' }],
-    warnings: [{ message: 'Offboarding SLA exceeded for 2 accounts', type: 'quality' }],
-  },
-  {
-    id: 'EV-009', name: 'Snyk SAST Scan Results', type: 'Scan Report', source: 'integration', integration: 'snyk',
-    framework: 'NIST CSF 2.0', controls: ['PR.PS-01', 'ID.RA-01'], status: 'Valid',
-    collectedAt: '2026-05-10T04:00:00Z', expiresAt: null, size: '3.1 MB',
-    owner: 'Snyk Auto-Collector', tags: ['SAST', 'Dependencies'],
-    description: 'Static analysis and dependency vulnerability scan across all production repositories.',
-    gaps: [{ control: 'PR.PS-02', description: '8 high-severity open-source vulnerabilities', severity: 'High' }],
-    warnings: [],
-  },
-  {
-    id: 'EV-010', name: 'Azure AD Privileged Access Review', type: 'Access Review', source: 'integration', integration: 'azure-ad',
-    framework: 'NIST CSF 2.0', controls: ['PR.AA-05', 'GV.SC-01'], status: 'Expiring Soon',
-    collectedAt: '2026-04-01T10:00:00Z', expiresAt: '2026-05-20T00:00:00Z', size: '2.2 MB',
-    owner: 'Azure Auto-Collector', tags: ['Privileged Access', 'Identity'],
-    description: 'Quarterly privileged role assignment review for Azure AD admin accounts.',
-    gaps: [],
-    warnings: [
-      { message: 'Evidence expires in 10 days — renew access review', type: 'expiry' },
-      { message: '5 Global Admin accounts have no recent sign-in', type: 'quality' },
-    ],
-  },
-  {
-    id: 'EV-011', name: 'Penetration Test Report — Q1 2026', type: 'Test Result', source: 'manual',
-    framework: 'NIST CSF 2.0', controls: ['ID.RA-01', 'PR.PS-01', 'DE.CM-01'], status: 'Valid',
-    collectedAt: '2026-03-15T09:00:00Z', expiresAt: '2027-03-15T00:00:00Z', size: '4.7 MB',
-    owner: 'Security Team', tags: ['Pentest', 'External Audit'],
-    description: 'Annual external penetration test report covering web apps, APIs and network perimeter.',
-    gaps: [{ control: 'PR.DS-01', description: 'Sensitive data exposed in API error responses', severity: 'High' }],
-    warnings: [],
-  },
-  {
-    id: 'EV-012', name: 'GCP Security Command Center Export', type: 'Config Export', source: 'integration', integration: 'gcp',
-    framework: 'NIST CSF 2.0', controls: ['DE.CM-01', 'ID.AM-01', 'PR.DS-01'], status: 'Valid',
-    collectedAt: '2026-05-10T08:15:00Z', expiresAt: null, size: '6.1 MB',
-    owner: 'GCP Auto-Collector', tags: ['Cloud Security', 'CSPM'],
-    description: 'Security findings and misconfigurations from GCP Security Command Center.',
-    gaps: [{ control: 'PR.DS-01', description: 'GCS bucket with public read access detected', severity: 'Critical' }],
-    warnings: [{ message: 'Premium tier required for full threat detection coverage', type: 'coverage' }],
-  },
-  {
-    id: 'EV-013', name: 'Security Awareness Training Completion', type: 'Training Record', source: 'manual',
-    framework: 'NIST CSF 2.0', controls: ['GV.OC-01'], status: 'Valid',
-    collectedAt: '2026-04-30T17:00:00Z', expiresAt: '2027-04-30T00:00:00Z', size: '420 KB',
-    owner: 'HR / Security', tags: ['Training', 'Awareness'],
-    description: 'Annual security awareness training completion records — 94% completion rate.',
-    gaps: [],
-    warnings: [{ message: '14 employees have not completed mandatory training', type: 'coverage' }],
-  },
-  {
-    id: 'EV-014', name: 'Jamf Device Compliance Snapshot', type: 'Config Export', source: 'integration', integration: 'jamf',
-    framework: 'NIST CSF 2.0', controls: ['PR.AA-01', 'PR.PS-02'], status: 'Valid',
-    collectedAt: '2026-05-10T07:00:00Z', expiresAt: '2026-06-10T00:00:00Z', size: '1.3 MB',
-    owner: 'Jamf Auto-Collector', tags: ['MDM', 'Device', 'macOS'],
-    description: 'macOS device compliance posture — encryption, OS version, and configuration profiles.',
-    gaps: [],
-    warnings: [{ message: '8 devices running macOS <14.0 (EOL soon)', type: 'stale' }],
-  },
-  {
-    id: 'EV-015', name: 'API Health Check — Auth Service', type: 'API Response', source: 'api',
-    framework: 'NIST CSF 2.0', controls: ['PR.AA-03', 'DE.CM-01'], status: 'Valid',
-    collectedAt: '2026-05-10T08:45:00Z', expiresAt: null, size: '12 KB',
-    owner: 'API Collector v1', tags: ['API', 'Auth', 'Health'],
-    description: 'Automated API evidence collection from internal auth service health and config endpoints.',
-    gaps: [],
-    warnings: [],
-  },
-];
 
 // ─── Config ─────────────────────────────────────────────────────────────────────
 const TYPE_COLORS: Record<EvidenceType, string> = {
@@ -534,12 +351,24 @@ function ApiCollectionSection() {
 
 // ─── Main View ───────────────────────────────────────────────────────────────────
 export function EvidenceView() {
+  const [EVIDENCE, setEvidence]         = useState<EvidenceItem[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState<string | null>(null);
   const [selected, setSelected]         = useState<EvidenceItem | null>(null);
   const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState<EvidenceStatus | 'All'>('All');
   const [typeFilter, setTypeFilter]     = useState<EvidenceType | 'All'>('All');
   const [sourceFilters, setSourceFilters] = useState<Set<string>>(new Set());
   const [showApi, setShowApi]           = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    api.getEvidence()
+      .then(data => { if (active) { setEvidence(data); setError(null); } })
+      .catch(err => { if (active) setError(err.message ?? 'Failed to load evidence'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   function toggleSource(id: string) {
     setSourceFilters(prev => {
@@ -555,7 +384,7 @@ export function EvidenceView() {
     const matchType     = typeFilter === 'All' || e.type === typeFilter;
     const matchSource   = sourceFilters.size === 0 || (e.integration && sourceFilters.has(e.integration)) || (e.source === 'manual' && sourceFilters.has('manual')) || (e.source === 'api' && sourceFilters.has('api'));
     return matchSearch && matchStatus && matchType && matchSource;
-  }), [search, statusFilter, typeFilter, sourceFilters]);
+  }), [EVIDENCE, search, statusFilter, typeFilter, sourceFilters]);
 
   // Stats
   const totalGaps     = EVIDENCE.reduce((s, e) => s + e.gaps.length, 0);
@@ -568,7 +397,7 @@ export function EvidenceView() {
     const m: Record<string, number> = {};
     EVIDENCE.forEach(e => { if (e.integration) m[e.integration] = (m[e.integration] ?? 0) + 1; });
     return m;
-  }, []);
+  }, [EVIDENCE]);
 
   const EVIDENCE_TYPES: EvidenceType[] = [
     'Policy Document','Screenshot','Config Export','Audit Log','Scan Report',
@@ -595,6 +424,17 @@ export function EvidenceView() {
           </button>
         </div>
       </header>
+
+      {loading && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <Clock className="w-4 h-4 animate-spin" /> Loading evidence…
+        </div>
+      )}
+      {error && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
