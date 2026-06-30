@@ -18,6 +18,7 @@ import controlsRouter from './routes/controls.js';
 import evidenceRouter from './routes/evidence.js';
 import auditsRouter from './routes/audits.js';
 import notesRouter from './routes/notes.js';
+import aiRouter from './routes/ai.js';
 import authRouter from './routes/auth.js';
 import { requireAuth } from './auth.js';
 import { findUserById } from './db.js';
@@ -71,6 +72,7 @@ app.use('/api/controls', protect, controlsRouter);
 app.use('/api/evidence', protect, evidenceRouter);
 app.use('/api/audits', protect, auditsRouter);
 app.use('/api/notes', protect, notesRouter);
+app.use('/api/ai', protect, aiRouter);
 
 // Serve frontend build in production
 const distPath = path.join(__dirname, '../dist');

@@ -29,7 +29,7 @@
 | **Audit Management** | შიდა და გარე აუდიტების ორგანიზება, ნიმუშები, ანგარიშები |
 
 ### 🤖 AI ინტელექტი
-- **Aegis Intelligence** — ჩაშენებული AI ასისტენტი (Google Gemini), რომელიც იცნობს თქვენი ორგანიზაციის GRC კონტექსტს
+- **Aegis Intelligence** — ჩაშენებული AI ასისტენტი (Google Gemini), რომელიც იცნობს თქვენი ორგანიზაციის GRC კონტექსტს. გამოძახება ხდება სერვერის `POST /api/ai/chat`-ის გავლით — API key მხოლოდ backend-ზე ინახება, ხოლო მოდელს გადაეცემა რეალური GRC posture-ის snapshot (რისკები, ნაპოვნები, კონტროლები, NIST ქულები). `GEMINI_API_KEY`-ის გარეშე ასისტენტი აბრუნებს "not configured" შეტყობინებას.
 - **Slash Commands (`/`)** — სწრაფი Skill-გამოძახება: `/Risk Analyst`, `/Audit Evidence Reviewer` და სხვა
 - **Starter Prompts** — ერთი კლიკით: "Summarize today's risk posture", "Which audit evidence is the weakest?" და სხვა
 - **Custom Skills** — საკუთარი AI agent skill-ების შექმნა და კონფიგურაცია
