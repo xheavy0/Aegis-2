@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MOCK_CALENDAR_EVENTS, TEAM_MEMBERS } from '@/src/constants';
+import React, { useState, useEffect } from 'react';
+import { TEAM_MEMBERS } from '@/src/constants';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { AppNotification, CalendarEvent } from '@/src/types';
+import { api } from '@/src/lib/api';
 
 interface CalendarViewProps {
   currentUser: string;
@@ -24,7 +25,9 @@ interface CalendarViewProps {
 export function CalendarView({ currentUser, onNotify }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date('2026-04-29'));
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [events, setEvents] = useState<CalendarEvent[]>(MOCK_CALENDAR_EVENTS);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [formData, setFormData] = useState<CalendarEvent>({
     id: '',
@@ -36,6 +39,15 @@ export function CalendarView({ currentUser, onNotify }: CalendarViewProps) {
     type: 'Meeting',
     assignees: [currentUser],
   });
+
+  useEffect(() => {
+    let active = true;
+    api.getEvents()
+      .then(data => { if (active) { setEvents(data); setError(null); } })
+      .catch(err => { if (active) setError(err.message ?? 'Failed to load calendar'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -55,23 +67,27 @@ export function CalendarView({ currentUser, onNotify }: CalendarViewProps) {
     });
   };
 
-  const handleCreateEvent = (e: React.FormEvent) => {
+  const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newEvent: CalendarEvent = {
-      ...formData,
-      id: `E-${Math.floor(Math.random() * 900) + 100}`,
+    const { id: _omit, ...rest } = formData;
+    const body = {
+      ...rest,
       assignees: formData.assignees?.length ? formData.assignees : [currentUser],
     };
-
-    setEvents((prev) => [newEvent, ...prev]);
-    onNotify({
-      title: 'New calendar event',
-      message: `${newEvent.title} was scheduled for ${newEvent.date} at ${newEvent.startTime}.`,
-      type: 'calendar',
-      audience: newEvent.assignees ?? [currentUser],
-    });
     setIsCreateModalOpen(false);
-    resetForm();
+    try {
+      const newEvent = await api.createEvent(body);
+      setEvents((prev) => [newEvent, ...prev]);
+      onNotify({
+        title: 'New calendar event',
+        message: `${newEvent.title} was scheduled for ${newEvent.date} at ${newEvent.startTime}.`,
+        type: 'calendar',
+        audience: newEvent.assignees ?? [currentUser],
+      });
+      resetForm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create event');
+    }
   };
 
   const toggleAssignee = (member: string) => {
@@ -145,6 +161,17 @@ export function CalendarView({ currentUser, onNotify }: CalendarViewProps) {
             </button>
         </div>
       </header>
+
+      {loading && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <CalendarIcon className="w-4 h-4 animate-pulse" /> Loading calendar…
+        </div>
+      )}
+      {error && (
+        <div className="glass-card p-4 flex items-center gap-3 text-sm font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Calendar View */}
