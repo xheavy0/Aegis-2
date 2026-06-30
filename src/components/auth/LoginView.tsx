@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, ArrowRight, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
-import { CurrentUser, userFromEmail } from '@/src/rbac';
+import { CurrentUser } from '@/src/rbac';
+import { api, setToken } from '@/src/lib/api';
 
 interface LoginViewProps {
   onLogin: (user: CurrentUser) => void;
@@ -12,14 +13,21 @@ export function LoginView({ onLogin }: LoginViewProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      onLogin(userFromEmail(email));
+    setError(null);
+    try {
+      const { token, user } = await api.login(email, password);
+      setToken(token);
+      onLogin(user as CurrentUser);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -117,6 +125,12 @@ export function LoginView({ onLogin }: LoginViewProps) {
             </div>
           </div>
 
+          {error && (
+            <div className="flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-300">
+              <AlertTriangle className="w-4 h-4 shrink-0" /> {error}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={isLoading}
@@ -129,6 +143,10 @@ export function LoginView({ onLogin }: LoginViewProps) {
             )}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
           </button>
+
+          <p className="text-center text-[10px] text-slate-500">
+            Demo: <span className="font-mono text-slate-400">admin@company.com</span> / <span className="font-mono text-slate-400">aegis2026</span>
+          </p>
         </form>
       </motion.div>
 

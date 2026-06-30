@@ -344,3 +344,18 @@ export interface NotesWorkspace {
   notes: Note[];
   folders: NoteFolder[];
 }
+
+export type UserRole = 'Admin' | 'Auditor' | 'Compliance' | 'Risk Officer' | 'User';
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  title: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: AuthUser;
+}

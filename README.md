@@ -112,13 +112,15 @@ npm run preview
 
 ## Default მომხმარებლები (demo)
 
+ავთენტიფიკაცია რეალურია — სერვერი მომხმარებლებს ინახავს **SQLite** ბაზაში (`server/data/aegis.db`), პაროლები hash-დება (scrypt), ხოლო login აბრუნებს HMAC-ხელმოწერილ token-ს (12სთ ვადით). ყველა demo მომხმარებლის პაროლია **`aegis2026`** (იცვლება `SEED_PASSWORD`-ით).
+
 | Email | პაროლი | როლი |
 |-------|--------|------|
-| admin@company.com | ნებისმიერი | Admin |
-| auditor@auditfirm.com | ნებისმიერი | Auditor |
-| compliance@company.com | ნებისმიერი | Compliance Lead |
-| risk@company.com | ნებისმიერი | Risk Officer |
-| officer@company.com | ნებისმიერი | User |
+| admin@company.com | `aegis2026` | Admin |
+| auditor@auditfirm.com | `aegis2026` | Auditor |
+| compliance@company.com | `aegis2026` | Compliance Lead |
+| risk@company.com | `aegis2026` | Risk Officer |
+| officer@company.com | `aegis2026` | User |
 
 ---
 
