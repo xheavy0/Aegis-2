@@ -15,16 +15,33 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 router.post('/', (req: Request, res: Response) => {
-  const { name, criticality, complianceStatus } = req.body as Partial<Vendor>;
-  if (!name || !criticality || !complianceStatus) {
-    return res.status(400).json({ error: 'Missing required fields: name, criticality, complianceStatus' });
+  const body = req.body as Partial<Vendor>;
+  if (!body.name || !body.tier || !body.complianceStatus) {
+    return res.status(400).json({ error: 'Missing required fields: name, tier, complianceStatus' });
   }
+  const today = new Date().toISOString().split('T')[0];
   const newVendor: Vendor = {
     id: nextId('V'),
-    name,
-    criticality,
-    complianceStatus,
-    lastAssessment: new Date().toISOString().split('T')[0],
+    name: body.name,
+    category: body.category ?? 'Other',
+    tier: body.tier,
+    securityScore: body.securityScore ?? 0,
+    inherentRisk: body.inherentRisk ?? 'Medium',
+    residualRisk: body.residualRisk ?? 'Medium',
+    complianceStatus: body.complianceStatus,
+    lastAssessment: body.lastAssessment ?? today,
+    nextReview: body.nextReview ?? today,
+    owner: body.owner ?? 'Unassigned',
+    openFindings: body.openFindings ?? 0,
+    criticalFindings: body.criticalFindings ?? 0,
+    certifications: body.certifications ?? [],
+    impactScore: body.impactScore ?? 1,
+    likelihoodScore: body.likelihoodScore ?? 1,
+    riskTrend: body.riskTrend ?? 'Stable',
+    annualSpend: body.annualSpend ?? '$0',
+    description: body.description ?? '',
+    dataAccess: body.dataAccess ?? [],
+    riskCategories: body.riskCategories ?? [],
   };
   vendors.push(newVendor);
   res.status(201).json(newVendor);
