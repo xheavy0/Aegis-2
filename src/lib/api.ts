@@ -22,7 +22,7 @@ export const api = {
   // Risks
   getRisks: () => req<Risk[]>('GET', '/risks'),
   getRisk: (id: string) => req<Risk>('GET', `/risks/${id}`),
-  createRisk: (body: Omit<Risk, 'id' | 'updatedAt'>) => req<Risk>('POST', '/risks', body),
+  createRisk: (body: Omit<Risk, 'id'>) => req<Risk>('POST', '/risks', body),
   updateRisk: (id: string, body: Partial<Risk>) => req<Risk>('PUT', `/risks/${id}`, body),
   deleteRisk: (id: string) => req<void>('DELETE', `/risks/${id}`),
 

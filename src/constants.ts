@@ -1,4 +1,4 @@
-import { NISTStatus, Risk, Finding, Vendor, Task, CalendarEvent } from './types';
+import { NISTStatus, Finding, Vendor, Task, CalendarEvent } from './types';
 
 export const NIST_CSF_FUNCTIONS = [
   { id: 'GOVERN', label: 'Govern', color: '#6366F1', description: 'Establish the organizations mission, stakeholder expectations, and legal requirements.' },
@@ -16,12 +16,6 @@ export const MOCK_NIST_STATUS: NISTStatus[] = [
   { function: 'DETECT', score: 58, totalControls: 18, implementedControls: 10 },
   { function: 'RESPOND', score: 92, totalControls: 21, implementedControls: 19 },
   { function: 'RECOVER', score: 78, totalControls: 12, implementedControls: 9 },
-];
-
-export const MOCK_RISKS: Risk[] = [
-  { id: 'R-101', title: 'Unencrypted Sensitive Data in Cloud Storage', impact: 'Critical', likelihood: 'Medium', status: 'Open', owner: 'Jane Doe', updatedAt: '2024-03-20' },
-  { id: 'R-102', title: 'Lack of MFA for External Vendors', impact: 'High', likelihood: 'High', status: 'Mitigated', owner: 'John Smith', updatedAt: '2024-03-15' },
-  { id: 'R-103', title: 'Outdated Patch Management Policy', impact: 'Medium', likelihood: 'Low', status: 'Accepted', owner: 'Alice Brown', updatedAt: '2024-02-28' },
 ];
 
 export const MOCK_FINDINGS: Finding[] = [
